@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalable Online Banking System — UCS3513</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ================= Top Navigation Bar ================= -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">🏛️</div>
+            <div>Apex Reserve Bank <span class="brand-badge">UCS3513 Sharded</span></div>
+        </div>
+
+        <div class="nav-menu" id="nav-authenticated-menu" style="display: none;">
+            <button class="nav-item active" onclick="showSection('dashboard')">Dashboard</button>
+            <button class="nav-item" onclick="showSection('accounts')">Accounts</button>
+            <button class="nav-item" onclick="showSection('transfers')">Transfers</button>
+            <button class="nav-item" onclick="showSection('bills')">Bill Payments</button>
+            <button class="nav-item" onclick="showSection('beneficiaries')">Beneficiaries</button>
+            <button class="nav-item" onclick="showSection('history')">History</button>
+            <button class="nav-item" onclick="showSection('system-insights')">System Insights</button>
+        </div>
+
+        <div class="nav-actions">
+            <button id="notif-btn" class="notif-badge-btn" onclick="showSection('notifications')" style="display: none;">
+                🔔 <span id="unread-count" class="badge-count">0</span>
+            </button>
+            <div id="user-display" style="font-size: 0.9rem; color: var(--text-secondary); display: none;"></div>
+            <button id="logout-btn" class="btn btn-secondary" onclick="logout()" style="display: none;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+
+        <!-- ================= SECTION 1: AUTHENTICATION ================= -->
+        <section id="section-auth" class="page-section active">
+            <div style="max-width: 480px; margin: 2rem auto;">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <h2>Welcome to Scalable Online Banking</h2>
+                        <p>UCS3513 System Design Laboratory Demo Environment</p>
+                    </div>
+
+                    <!-- Demo Credentials Quick Fill -->
+                    <div style="background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.4); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #a5b4fc; margin-bottom: 0.5rem;">QUICK DEMO LOGINS (PRE-SEEDED):</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem;" onclick="fillDemoLogin('john.doe@example.com', 'Password123!')">
+                                👤 John Doe (₹50,000 INR) — john.doe@example.com
+                            </button>
+                            <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem;" onclick="fillDemoLogin('alice.smith@example.com', 'Password123!')">
+                                👤 Alice Smith (₹75,000 INR) — alice.smith@example.com
+                            </button>
+                            <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem;" onclick="fillDemoLogin('bob.jones@example.com', 'Password123!')">
+                                👤 Bob Jones (₹25,000 INR) — bob.jones@example.com
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Auth Form Tabs -->
+                    <div class="tab-nav">
+                        <button id="tab-login-btn" class="tab-btn active" onclick="toggleAuthTab('login')">Customer Login</button>
+                        <button id="tab-register-btn" class="tab-btn" onclick="toggleAuthTab('register')">Register New</button>
+                    </div>
+
+                    <!-- Login Form -->
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label>Customer Email</label>
+                            <input type="email" id="login-email" required placeholder="customer@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%;">
+                            Sign In to Account
+                        </button>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; text-align: center;">
+                            Protected by Redis Token Bucket Rate Limiter
+                        </div>
+                    </form>
+
+                    <!-- Registration Form -->
+                    <form id="register-form" onsubmit="handleRegister(event)" style="display: none;">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="reg-name" required placeholder="e.g. David Miller">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="reg-email" required placeholder="e.g. david.miller@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Password (Min 6 chars)</label>
+                            <input type="password" id="reg-password" minlength="6" required placeholder="••••••••">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" id="reg-phone" placeholder="+91-9876543210">
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Synthetic Deposit (₹ INR)</label>
+                            <input type="number" id="reg-deposit" value="5000" min="500" step="100">
+                        </div>
+                        <button type="submit" id="btn-register-submit" class="btn btn-primary" style="width: 100%;">
+                            Create Account & Open Default Bank Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 2: DASHBOARD ================= -->
+        <section id="section-dashboard" class="page-section">
+            <div class="balance-hero card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="balance-label">Authoritative MongoDB Balance</div>
+                        <div class="balance-amount">₹ <span id="dash-balance">0.00</span> <span style="font-size: 1.25rem; font-weight: 500;">INR</span></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <label style="color: #a5b4fc;">Active Account</label>
+                        <select id="dash-account-selector" onchange="onAccountChange(this.value)" style="width: auto; background: rgba(0,0,0,0.4); border-color: rgba(99,102,241,0.5);">
+                        </select>
+                    </div>
+                </div>
+                <div class="balance-meta">
+                    <div>Customer ID: <strong id="dash-cust-id">-</strong></div>
+                    <div>Account Status: <span class="badge badge-active" id="dash-acc-status">ACTIVE</span></div>
+                    <div>Consistency: <span style="color: #67e8f9;">ACID Uncached Source of Truth</span></div>
+                </div>
+            </div>
+
+            <div class="grid-4" style="margin-bottom: 1.5rem;">
+                <div class="metric-card" onclick="showSection('transfers')" style="cursor: pointer;">
+                    <div class="metric-title">Quick Action</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #a5b4fc; margin-top: 0.25rem;">💸 Send Transfer</div>
+                    <div class="metric-subtitle">Multi-document transaction</div>
+                </div>
+                <div class="metric-card" onclick="showSection('bills')" style="cursor: pointer;">
+                    <div class="metric-title">Quick Action</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #67e8f9; margin-top: 0.25rem;">⚡ Pay Utility Bill</div>
+                    <div class="metric-subtitle">Electricity, Water, Fiber</div>
+                </div>
+                <div class="metric-card" onclick="showSection('beneficiaries')" style="cursor: pointer;">
+                    <div class="metric-title">Beneficiaries</div>
+                    <div class="metric-value" id="dash-beneficiary-count">0</div>
+                    <div class="metric-subtitle">Registered destinations</div>
+                </div>
+                <div class="metric-card" onclick="showSection('system-insights')" style="cursor: pointer;">
+                    <div class="metric-title">System Insights</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #34d399; margin-top: 0.25rem;">🔬 Cluster & Design</div>
+                    <div class="metric-subtitle">Shards, Redis, Kafka, Trie</div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions Table -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Recent Financial Activity</h2>
+                    <button class="btn btn-secondary" onclick="showSection('history')">View Full History</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Reference</th>
+                                <th>Type</th>
+                                <th>Direction</th>
+                                <th>Counterparty Account</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-recent-tx-tbody">
+                            <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading transactions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 3: ACCOUNTS ================= -->
+        <section id="section-accounts" class="page-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h1>My Bank Accounts</h1>
+                    <p>Authoritative accounts stored across MongoDB native shards</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('modal-open-account')">+ Open Additional Account</button>
+            </div>
+
+            <div class="grid-2" id="accounts-grid">
+                <!-- Dynamically populated account cards -->
+            </div>
+        </section>
+
+        <!-- ================= SECTION 4: TRANSFERS ================= -->
+        <section id="section-transfers" class="page-section">
+            <div style="max-width: 640px; margin: 0 auto;">
+                <div class="card">
+                    <h1>Transfer Funds</h1>
+                    <p style="margin-bottom: 1.5rem;">Atomic Multi-Document Transfer with Double-Entry Ledger Protection</p>
+
+                    <form id="transfer-form" onsubmit="handleTransferSubmit(event)">
+                        <div class="form-group">
+                            <label>Source Account (Must be owned by you)</label>
+                            <select id="transfer-source-account" required></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Destination Account Number</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="transfer-dest-account" required placeholder="e.g. ACC-1001-10000002">
+                                <button type="button" class="btn btn-secondary" onclick="openBeneficiarySelector()">Select Beneficiary</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Amount (₹ INR)</label>
+                            <input type="number" id="transfer-amount" min="1.00" step="0.01" required placeholder="0.00">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Payment Description / Note</label>
+                            <input type="text" id="transfer-description" value="Consulting payment">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; justify-content: space-between;">
+                                <span>Idempotency Key (Prevents Duplicate Financial Operations)</span>
+                                <a href="javascript:void(0)" onclick="regenerateIdempotencyKey()" style="color: #818cf8; font-size: 0.8rem;">Generate New</a>
+                            </label>
+                            <input type="text" id="transfer-idempotency-key" readonly style="background: rgba(0,0,0,0.3); font-family: monospace;">
+                        </div>
+
+                        <button type="submit" id="btn-transfer-submit" class="btn btn-primary" style="width: 100%;">
+                            Authorize & Execute Transfer
+                        </button>
+                    </form>
+
+                    <!-- Transfer Confirmation Result -->
+                    <div id="transfer-result-card" style="display: none; margin-top: 1.5rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 1.25rem;">
+                        <h3 style="color: #6ee7b7; margin-bottom: 0.5rem;">✅ Transfer Confirmed</h3>
+                        <p id="transfer-result-message" style="color: #d1fae5; font-size: 0.9rem; margin-bottom: 0.75rem;"></p>
+                        <div style="font-size: 0.85rem; color: #a7f3d0; font-family: monospace;" id="transfer-result-details"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 5: BILL PAYMENTS ================= -->
+        <section id="section-bills" class="page-section">
+            <div class="grid-2">
+                <div class="card">
+                    <h1>Pay Utility Bills</h1>
+                    <p style="margin-bottom: 1.5rem;">Synthetic Utility Biller Payments with Double-Entry Bookkeeping</p>
+
+                    <!-- Category Tabs -->
+                    <div class="tab-nav">
+                        <button class="tab-btn active" onclick="filterBillerCategory('ALL')">All</button>
+                        <button class="tab-btn" onclick="filterBillerCategory('ELECTRICITY')">Electricity</button>
+                        <button class="tab-btn" onclick="filterBillerCategory('WATER')">Water</button>
+                        <button class="tab-btn" onclick="filterBillerCategory('INTERNET')">Internet</button>
+                        <button class="tab-btn" onclick="filterBillerCategory('MOBILE')">Mobile</button>
+                    </div>
+
+                    <!-- Autocomplete Search Bar -->
+                    <div class="form-group autocomplete-wrapper">
+                        <label>Search Biller (Backed by Java Trie & Redis Cache)</label>
+                        <input type="text" id="biller-search-input" placeholder="Type 'elec', 'water', 'fiber'..." oninput="onBillerSearchInput(this.value)">
+                        <div id="biller-autocomplete-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+
+                    <form id="bill-pay-form" onsubmit="handleBillPaySubmit(event)">
+                        <div class="form-group">
+                            <label>Selected Biller</label>
+                            <select id="bill-biller-select" required onchange="onBillerSelected(this.value)"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Consumer Number / Reference</label>
+                            <input type="text" id="bill-consumer-ref" required placeholder="e.g. METER-884920">
+                        </div>
+                        <div class="form-group">
+                            <label>Debiting Account</label>
+                            <select id="bill-source-account" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bill Amount (₹ INR)</label>
+                            <input type="number" id="bill-amount" min="1.00" step="0.01" required placeholder="0.00">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            Confirm & Pay Utility Bill
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Past Bill Payments -->
+                <div class="card">
+                    <h2>Utility Payment History</h2>
+                    <p style="margin-bottom: 1rem;">Past bill settlements for this customer</p>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Biller</th>
+                                    <th>Consumer Ref</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bill-history-tbody">
+                                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No bill payments recorded yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 6: BENEFICIARIES ================= -->
+        <section id="section-beneficiaries" class="page-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h1>Registered Beneficiaries</h1>
+                    <p>Verified internal transfer destinations</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('modal-add-beneficiary')">+ Add New Beneficiary</button>
+            </div>
+
+            <div class="grid-3" id="beneficiaries-grid">
+                <!-- Dynamically populated beneficiary cards -->
+            </div>
+        </section>
+
+        <!-- ================= SECTION 7: TRANSACTION HISTORY ================= -->
+        <section id="section-history" class="page-section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h1>Transaction History & Ledger Audit</h1>
+                        <p>Database-backed transaction history with distributed scatter-gather query support</p>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <select id="history-type-filter" onchange="loadTransactionHistory(0)" style="width: 180px;">
+                            <option value="ALL">All Types</option>
+                            <option value="TRANSFER">Transfers Only</option>
+                            <option value="BILL_PAYMENT">Bill Payments Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Transaction Reference</th>
+                                <th>Type</th>
+                                <th>Direction</th>
+                                <th>Source Account</th>
+                                <th>Destination Account</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Ledger Audit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-tbody">
+                            <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Loading transactions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                    <div id="history-page-info" style="font-size: 0.85rem; color: var(--text-secondary);">Page 1</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="btn-hist-prev" class="btn btn-secondary" onclick="prevHistoryPage()" disabled>Previous</button>
+                        <button id="btn-hist-next" class="btn btn-secondary" onclick="nextHistoryPage()">Next</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 8: NOTIFICATIONS ================= -->
+        <section id="section-notifications" class="page-section">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <div>
+                            <h1>In-App Notifications</h1>
+                            <p>Transactional Outbox & Apache Kafka Asynchronous Pipeline</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="markAllNotificationsAsRead()">Mark All as Read</button>
+                    </div>
+
+                    <div id="notifications-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <!-- Dynamically populated notifications -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 9: SYSTEM INSIGHTS ================= -->
+        <section id="section-system-insights" class="page-section">
+            <div style="margin-bottom: 1.5rem;">
+                <h1>System Design Laboratory Insights</h1>
+                <p>Live benchmarks, distributed sharding inspection, and laboratory component experiments</p>
+            </div>
+
+            <!-- Insights Sub-Tabs -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchInsightTab('ratelimit')">1. Token Bucket Rate Limiter</button>
+                <button class="tab-btn" onclick="switchInsightTab('sharding')">2. MongoDB Native Sharding</button>
+                <button class="tab-btn" onclick="switchInsightTab('consistenthash')">3. Consistent Hashing</button>
+                <button class="tab-btn" onclick="switchInsightTab('idgen')">4. Unique ID Benchmark</button>
+                <button class="tab-btn" onclick="switchInsightTab('shortener')">5. URL Shortener</button>
+                <button class="tab-btn" onclick="switchInsightTab('autocomplete')">6. Trie Autocomplete</button>
+                <button class="tab-btn" onclick="switchInsightTab('crawler')">7. Web Crawler</button>
+                <button class="tab-btn" onclick="switchInsightTab('scaling')">8. Dataset Scaling</button>
+            </div>
+
+            <!-- 1. Token Bucket Rate Limiter Panel -->
+            <div id="insight-tab-ratelimit" class="insight-content active">
+                <div class="grid-4" style="margin-bottom: 1.5rem;">
+                    <div class="metric-card">
+                        <div class="metric-title">Total Requests Tracked</div>
+                        <div class="metric-value" id="rl-total-reqs">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Allowed Requests</div>
+                        <div class="metric-value" style="color: #34d399;" id="rl-allowed-reqs">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Rejected (HTTP 429)</div>
+                        <div class="metric-value" style="color: #f43f5e;" id="rl-rejected-reqs">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Rejection Percentage</div>
+                        <div class="metric-value" id="rl-rejection-pct">0.0%</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Live Burst Traffic Rate-Limit Simulator</h2>
+                    <p style="margin-bottom: 1rem;">Execute burst of 15 rapid simulated login requests to observe token depletion and HTTP 429 rejections.</p>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                        <button class="btn btn-primary" onclick="simulateBurstTraffic(15)">Trigger 15 Burst Requests</button>
+                        <button class="btn btn-secondary" onclick="resetRateLimiterMetrics()">Reset Telemetry</button>
+                    </div>
+                    <div id="rl-burst-results" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
+                        Click "Trigger 15 Burst Requests" to run test...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. MongoDB Sharding Panel -->
+            <div id="insight-tab-sharding" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>MongoDB Native Sharded Cluster Status</h2>
+                    <p style="margin-bottom: 1rem;">Inspecting live mongos router connection and collections</p>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn btn-secondary" onclick="checkShardingStatus()">Refresh Cluster Metadata</button>
+                    </div>
+                    <div id="sharding-status-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Loading cluster status...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Consistent Hashing Panel -->
+            <div id="insight-tab-consistenthash" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>Consistent Hashing Hash Ring (Virtual Nodes)</h2>
+                    <p style="margin-bottom: 1rem;">Application-level routing experiment with minimal key remapping property</p>
+                    <div class="grid-3" style="margin-bottom: 1.5rem;">
+                        <div class="metric-card">
+                            <div class="metric-title">Active Server Nodes</div>
+                            <div class="metric-value" id="ch-node-count">3</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Virtual Nodes on Ring</div>
+                            <div class="metric-value" id="ch-vnode-count">300</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">VNodes Per Server</div>
+                            <div class="metric-value">100</div>
+                        </div>
+                    </div>
+
+                    <h3>Topology Mutation Experiment</h3>
+                    <p style="margin-bottom: 1rem;">Observe remapped key counts and percentages when adding or removing a node from 1,000 synthetic banking request keys.</p>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn btn-primary" onclick="runConsistentHashExperiment('ADD', 'banking-srv-node-4')">+ Add Node 4</button>
+                        <button class="btn btn-outline-danger" onclick="runConsistentHashExperiment('REMOVE', 'banking-srv-node-4')">- Remove Node 4</button>
+                        <button class="btn btn-secondary" onclick="loadConsistentHashDistribution()">Analyze Distribution</button>
+                    </div>
+                    <div id="ch-experiment-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Click "+ Add Node 4" or "Analyze Distribution" to run experiment...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Unique ID Generator Benchmark Panel -->
+            <div id="insight-tab-idgen" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>Unique ID Generator Collision Benchmark</h2>
+                    <p style="margin-bottom: 1rem;">Generate high volumes of transaction references and verify zero collisions.</p>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+                        <button class="btn btn-primary" onclick="runIdBenchmark(5000)">Run 5,000 IDs</button>
+                        <button class="btn btn-primary" onclick="runIdBenchmark(20000)">Run 20,000 IDs</button>
+                        <button class="btn btn-primary" onclick="runIdBenchmark(50000)">Run 50,000 IDs</button>
+                    </div>
+                    <div id="idgen-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Click any benchmark button above to measure ID generation rate and collision detection...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. URL Shortener Panel -->
+            <div id="insight-tab-shortener" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>URL Shortener with Redis Cache-Aside</h2>
+                    <p style="margin-bottom: 1rem;">Creates 6-character hash codes for permitted public synthetic biller information routes.</p>
+                    <div class="form-group" style="max-width: 500px;">
+                        <label>Public Synthetic Route</label>
+                        <select id="shortener-route-select">
+                            <option value="/synthetic/page1.html">/synthetic/page1.html (Central Hub)</option>
+                            <option value="/synthetic/page2.html">/synthetic/page2.html (Telecom)</option>
+                            <option value="/synthetic/page3.html">/synthetic/page3.html (Regional)</option>
+                            <option value="/synthetic/page4.html">/synthetic/page4.html (Green Energy)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="createShortUrl()" style="margin-bottom: 1.5rem;">Create Short Link</button>
+
+                    <div id="shortener-result" style="display: none; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem;">
+                    </div>
+
+                    <h3>Shortener Telemetry & Redis Cache Hit Ratio</h3>
+                    <div id="shortener-metrics" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Loading metrics...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Trie Autocomplete Panel -->
+            <div id="insight-tab-autocomplete" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>Trie-Based Autocomplete + Redis Cache Evaluation</h2>
+                    <p style="margin-bottom: 1rem;">Inspects Trie search latencies, cache-hit vs cache-miss speedup in microseconds.</p>
+                    <div style="display: flex; gap: 0.5rem; max-width: 480px; margin-bottom: 1rem;">
+                        <input type="text" id="trie-eval-input" placeholder="Type 'elec', 'wat', 'met'..." value="elec">
+                        <button class="btn btn-primary" onclick="evaluateTrieQuery()">Execute Search</button>
+                    </div>
+                    <div id="trie-eval-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Click "Execute Search" to run query and check latency...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Web Crawler Panel -->
+            <div id="insight-tab-crawler" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>Synthetic Web Crawler (Spring Boot + Redis Queue)</h2>
+                    <p style="margin-bottom: 1rem;">Crawls local synthetic HTML pages, tracks visited URLs in Redis, and extracts synthetic billers.</p>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <button class="btn btn-primary" onclick="startCrawler()">Start Local Crawl</button>
+                        <button class="btn btn-secondary" onclick="refreshCrawlerStatus()">Refresh Metrics</button>
+                    </div>
+                    <div id="crawler-metrics-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; margin-bottom: 1.5rem;">
+                        Click "Start Local Crawl" to begin traversal...
+                    </div>
+
+                    <h3>Extracted Synthetic Biller Records</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Biller Name</th>
+                                    <th>Category</th>
+                                    <th>Discovered Source URL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crawler-records-tbody">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No records extracted yet. Run crawl first.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Dataset Scaling Panel -->
+            <div id="insight-tab-scaling" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2>Dataset Scaling Experiment (MongoDB Shard Stress Testing)</h2>
+                    <p style="margin-bottom: 1rem;">Generates batches of synthetic customers, accounts, and cross-account transfers to measure chunk distribution.</p>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+                        <button class="btn btn-primary" onclick="generateScalingData(50, 5)">Generate 50 Customers + 250 Transfers</button>
+                        <button class="btn btn-primary" onclick="generateScalingData(100, 10)">Generate 100 Customers + 1,000 Transfers</button>
+                    </div>
+                    <div id="scaling-output" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                        Click any generation button above to scale the synthetic database...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Open Account Modal -->
+    <div id="modal-open-account" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-open-account')">✕</button>
+            <h2>Open Additional Bank Account</h2>
+            <p style="margin-bottom: 1.5rem;">Create a secondary account under your authenticated customer profile.</p>
+            <form onsubmit="handleOpenAccountSubmit(event)">
+                <div class="form-group">
+                    <label>Account Type</label>
+                    <select id="new-account-type">
+                        <option value="SAVINGS">Savings Account</option>
+                        <option value="CHECKING">Checking Account</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Initial Deposit (₹ INR)</label>
+                    <input type="number" id="new-account-deposit" value="1000" min="0" step="100">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm & Open Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Beneficiary Modal -->
+    <div id="modal-add-beneficiary" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-add-beneficiary')">✕</button>
+            <h2>Add Transfer Beneficiary</h2>
+            <p style="margin-bottom: 1.5rem;">Destination account is validated against active bank records.</p>
+            <form onsubmit="handleAddBeneficiarySubmit(event)">
+                <div class="form-group">
+                    <label>Beneficiary Name</label>
+                    <input type="text" id="ben-name" required placeholder="e.g. Alice Smith">
+                </div>
+                <div class="form-group">
+                    <label>Internal Account Number</label>
+                    <input type="text" id="ben-account" required placeholder="e.g. ACC-1001-10000002">
+                </div>
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" id="ben-bank" value="Apex Reserve Bank">
+                </div>
+                <div class="form-group">
+                    <label>Notification Email (Optional)</label>
+                    <input type="email" id="ben-email" placeholder="beneficiary@example.com">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Verify & Save Beneficiary</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Select Beneficiary Modal for Transfer -->
+    <div id="modal-select-beneficiary" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-select-beneficiary')">✕</button>
+            <h2>Select a Beneficiary</h2>
+            <div id="transfer-beneficiary-picker-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; margin-top: 1rem;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Double-Entry Ledger Audit Modal -->
+    <div id="modal-ledger-audit" class="modal-overlay">
+        <div class="modal-content" style="max-width: 680px;">
+            <button class="modal-close" onclick="closeModal('modal-ledger-audit')">✕</button>
+            <h2>Double-Entry Ledger Audit</h2>
+            <p style="margin-bottom: 1rem;">Cryptographic & Mathematical Balance Proof: Sum(Debits) == Sum(Credits)</p>
+            <div id="ledger-audit-details" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap;">
+                Loading audit...
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Frontend Vanilla JavaScript Logic -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

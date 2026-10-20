@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Synthetic Public Utility Directory — Central Hub</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f8fafc; }
+        .biller-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Synthetic Public Utility Directory — Page 1</h1>
+    <p>Central directory of municipal utility services and authorized billers.</p>
+
+    <div class="biller-card" data-code="ELEC-01" data-name="Apex City Power & Electric" data-category="ELECTRICITY">
+        <h3>Apex City Power & Electric</h3>
+        <p>Biller Code: ELEC-01 | Category: Electricity</p>
+    </div>
+
+    <div class="biller-card" data-code="WATER-01" data-name="Metropolitan Water Works" data-category="WATER">
+        <h3>Metropolitan Water Works</h3>
+        <p>Biller Code: WATER-01 | Category: Water</p>
+    </div>
+
+    <h2>Directory Navigation Links</h2>
+    <ul>
+        <li><a href="/synthetic/page2.html">Telecommunications & Internet Providers (Page 2)</a></li>
+        <li><a href="/synthetic/page3.html">Municipal & Regional Services (Page 3)</a></li>
+        <!-- Intentionally include duplicate link to test duplicate avoidance in crawler -->
+        <li><a href="/synthetic/page2.html">Duplicate link to Page 2</a></li>
+    </ul>
+</body>
+</html>
