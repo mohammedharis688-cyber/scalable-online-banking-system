@@ -29,7 +29,7 @@ public class BeneficiaryController {
             @RequestBody Map<String, String> request,
             @AuthenticationPrincipal CustomerPrincipal principal) {
         try {
-            String name = request.get("name");
+            String name = request.get("name") != null ? request.get("name") : request.get("beneficiaryName");
             String accountNumber = request.get("accountNumber");
             String bankName = request.getOrDefault("bankName", "Apex Reserve Bank");
             String email = request.get("email");

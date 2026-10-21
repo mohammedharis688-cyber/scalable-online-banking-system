@@ -3,6 +3,7 @@ package com.systemdesign.banking.transfer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.systemdesign.banking.account.Account;
 import com.systemdesign.banking.account.AccountRepository;
+import com.systemdesign.banking.account.AccountService;
 import com.systemdesign.banking.ledger.LedgerEntry;
 import com.systemdesign.banking.ledger.LedgerRepository;
 import com.systemdesign.banking.notification.OutboxEvent;
@@ -34,6 +35,9 @@ class TransferServiceTest {
     private AccountRepository accountRepository;
 
     @Mock
+    private AccountService accountService;
+
+    @Mock
     private TransactionRepository transactionRepository;
 
     @Mock
@@ -52,6 +56,7 @@ class TransferServiceTest {
         objectMapper = new ObjectMapper();
         transferService = new TransferService(
                 accountRepository,
+                accountService,
                 transactionRepository,
                 ledgerRepository,
                 outboxRepository,
@@ -86,6 +91,8 @@ class TransferServiceTest {
         // Verify account balance updates
         assertEquals(BigDecimal.valueOf(1500.00), srcAccount.getBalance());
         assertEquals(BigDecimal.valueOf(1500.00), dstAccount.getBalance());
+        verify(accountService, times(1)).updateBalance(eq(srcAccNum), any(BigDecimal.class));
+        verify(accountService, times(1)).updateBalance(eq(dstAccNum), any(BigDecimal.class));
 
         // Verify Double-Entry Ledger Entries (1 DEBIT, 1 CREDIT)
         ArgumentCaptor<LedgerEntry> ledgerCaptor = ArgumentCaptor.forClass(LedgerEntry.class);

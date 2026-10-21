@@ -15,7 +15,7 @@ public class BillPayment {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @Indexed
     private String paymentReference;
 
     @Indexed

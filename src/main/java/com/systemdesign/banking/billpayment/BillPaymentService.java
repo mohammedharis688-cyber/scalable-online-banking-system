@@ -3,6 +3,7 @@ package com.systemdesign.banking.billpayment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.systemdesign.banking.account.Account;
 import com.systemdesign.banking.account.AccountRepository;
+import com.systemdesign.banking.account.AccountService;
 import com.systemdesign.banking.ledger.LedgerEntry;
 import com.systemdesign.banking.ledger.LedgerRepository;
 import com.systemdesign.banking.notification.OutboxEvent;
@@ -27,6 +28,7 @@ public class BillPaymentService {
     private final TransactionRepository transactionRepository;
     private final LedgerRepository ledgerRepository;
     private final OutboxRepository outboxRepository;
+    private final AccountService accountService;
     private final UniqueIdGenerator idGenerator;
     private final RedisCacheService cacheService;
     private final ObjectMapper objectMapper;
@@ -37,6 +39,7 @@ public class BillPaymentService {
             BillerRepository billerRepository,
             BillPaymentRepository billPaymentRepository,
             AccountRepository accountRepository,
+            AccountService accountService,
             TransactionRepository transactionRepository,
             LedgerRepository ledgerRepository,
             OutboxRepository outboxRepository,
@@ -46,6 +49,7 @@ public class BillPaymentService {
         this.billerRepository = billerRepository;
         this.billPaymentRepository = billPaymentRepository;
         this.accountRepository = accountRepository;
+        this.accountService = accountService;
         this.transactionRepository = transactionRepository;
         this.ledgerRepository = ledgerRepository;
         this.outboxRepository = outboxRepository;
@@ -134,8 +138,8 @@ public class BillPaymentService {
         sourceAccount.setBalance(newSourceBalance);
         billerAccount.setBalance(newBillerBalance);
 
-        accountRepository.save(sourceAccount);
-        accountRepository.save(billerAccount);
+        accountService.updateBalance(sourceAccount.getAccountNumber(), newSourceBalance);
+        accountService.updateBalance(billerAccount.getAccountNumber(), newBillerBalance);
 
         // 5. Generate Payment Record
         String paymentRef = idGenerator.generatePaymentReference();

@@ -15,7 +15,7 @@ public class LedgerEntry {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @Indexed
     private String ledgerId;
 
     @Indexed

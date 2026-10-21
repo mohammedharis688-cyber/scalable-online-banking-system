@@ -15,7 +15,7 @@ public class Account {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @Indexed
     private String accountNumber;
 
     @Indexed

@@ -57,7 +57,8 @@ public class RedisTokenBucketRateLimiter {
 
             if (result != null && result.size() >= 2) {
                 long allowedNum = ((Number) result.get(0)).longValue();
-                long remaining = Long.parseLong(result.get(1).toString());
+                double remainingVal = Double.parseDouble(result.get(1).toString());
+                long remaining = (long) Math.floor(remainingVal);
                 boolean allowed = (allowedNum == 1);
 
                 if (allowed) {

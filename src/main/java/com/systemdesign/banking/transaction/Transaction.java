@@ -18,7 +18,7 @@ public class Transaction {
     @Indexed
     private String transactionId;
 
-    @Indexed(unique = true)
+    @Indexed
     private String transactionReference;
 
     @Indexed

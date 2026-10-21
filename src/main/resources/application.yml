@@ -2,12 +2,14 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   application:
     name: scalable-online-banking-system
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/banking_db}
-      auto-index-creation: true
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27117/banking_db}
+      auto-index-creation: false
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}

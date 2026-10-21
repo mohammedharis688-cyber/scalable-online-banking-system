@@ -19,6 +19,13 @@ echo "=========================================================="
 
 mkdir -p "${SCRIPT_DIR}/raw"
 
+JMETER_BIN="jmeter"
+if [ -x "/home/devcontainers/apache-jmeter-5.6.3/bin/jmeter" ]; then
+    JMETER_BIN="/home/devcontainers/apache-jmeter-5.6.3/bin/jmeter"
+elif [ -x "$HOME/apache-jmeter-5.6.3/bin/jmeter" ]; then
+    JMETER_BIN="$HOME/apache-jmeter-5.6.3/bin/jmeter"
+fi
+
 run_workload() {
     name=$1
     threads=$2
@@ -33,7 +40,7 @@ run_workload() {
     rm -f "${jtl_file}"
     rm -rf "${report_dir}"
 
-    jmeter -n \
+    "$JMETER_BIN" -n \
         -t "${PLAN}" \
         -Jhost="${HOST}" \
         -Jport="${PORT}" \

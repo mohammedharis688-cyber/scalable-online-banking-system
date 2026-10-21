@@ -15,11 +15,11 @@
 ## Current Checkpoint
 - **Current Phase**: Phase 9 — Final Documentation, Testing & Handover
 - **Active Branch**: `member-1`
-- **Last Verified Commit**: `9d73d23` ("feat: complete banking backend, system design modules, tests, postman collection, and frontend")
-- **Last Completed Task**: Automated test verification with JUnit 5 & Byte Buddy dynamic agent on JDK 26 (15 tests run, 0 failures, 100% pass)
-- **Current Task**: Project memory update, documentation finalization, and branch commit verification
+- **Last Verified Commit**: `6e12c8f` ("docs: complete system documentation, architecture diagrams, jmeter benchmarks, and project memory")
+- **Last Completed Task**: Automated test verification with JUnit 5 on JDK 26 (15 tests run, 0 failures, 100% pass) and JMeter benchmark execution (Low, Medium, High dashboards generated in `reports/performance/`)
+- **Current Task**: Staging and committing sharding balance updates, benchmark reports, and updated memory to `member-1`
 - **Next Task**: Deliver comprehensive final handover report to user
-- **Last Checkpoint Timestamp**: 2026-10-21T00:45:00+05:30
+- **Last Checkpoint Timestamp**: 2026-10-21T15:28:00+05:30
 
 ---
 
@@ -35,7 +35,7 @@
 | Docker Compose Cluster definition | VERIFIED | `docker-compose.yml` defining config RS, 3 shard RS, mongos, Redis 7, Kafka KRaft, app |
 | MongoDB native sharded cluster | VERIFIED | `docker/init-cluster.sh` with replica sets, shard addition, and collection sharding |
 | Customer Auth & BCrypt | VERIFIED | `AuthController`, `JwtTokenProvider`, `CustomerPrincipal`, BCrypt password hashing |
-| Accounts & Balances (BigDecimal) | VERIFIED | `Account`, `AccountService`, Decimal128 storage, authoritative uncached MongoDB source |
+| Accounts & Balances (BigDecimal) | VERIFIED | `Account`, `AccountService.updateBalance`, Decimal128 storage, authoritative uncached MongoDB source |
 | Fund Transfers & Double-Entry Ledger | VERIFIED | `TransferServiceTest` (4/4 passed), multi-document `@Transactional`, idempotency, ledger audit |
 | Beneficiaries & Bill Payments | VERIFIED | `BeneficiaryController`, `BillPaymentController`, synthetic biller catalogue, ledger deduction |
 | Transaction History (paginated) | VERIFIED | `TransactionController` supporting pagination, filtering, and scatter-gather queries |
@@ -50,7 +50,7 @@
 | Browser Frontend (Vanilla HTML/CSS/JS) | VERIFIED | `src/main/resources/static/` responsive glassmorphic fintech UI + System Insights |
 | Automated JUnit / Integration Tests | VERIFIED | `.\mvnw.cmd test` executed: 15/15 passed with 0 failures |
 | Postman Collection | VERIFIED | `postman/scalable-online-banking.postman_collection.json` and environment file |
-| Apache JMeter Benchmark Plans | VERIFIED | `reports/performance/scalable-banking-benchmark.jmx`, shell & bat runners |
+| Apache JMeter Benchmark Plans | VERIFIED | `reports/performance/` (JMX plan, runner scripts, Low/Medium/High HTML dashboards, raw JTLs) |
 | Scalability & Failure Experiments | VERIFIED | Documented in `docs/scalability-and-failure-analysis.md` |
 | Final Documentation (`docs/*`, `README.md`) | VERIFIED | Complete suite of 8 comprehensive markdown docs and master `README.md` |
 
@@ -65,26 +65,20 @@
 ## Latest Verified Results
 - **JUnit 5 Test Suite**: 15 tests executed, 0 failures, 0 errors, 0 skipped.
 - **Java Compilation**: 69 source files compiled with 0 warnings or errors.
-- **Docker Compose**: Verified cluster definition with 3 MongoDB shards (`rs-shard1..3`), Config Server (`rs-cfg`), `mongos` router (port 27017), Redis 7, Kafka KRaft, and Spring Boot application.
+- **Performance Evaluation**: Apache JMeter HTML dashboards generated for 10, 25, and 50 concurrent user workloads with 0% 5xx errors.
+- **MongoDB Sharding**: Shard-key targeted balance update operations implemented in `AccountService`.
 - **Branch State**: Active branch is `member-1`. No commits made to `main`.
 
 ---
 
 ## Recent Changes
-- Created full documentation suite in `docs/`:
-  - `docs/requirements-and-component-mapping.md`
-  - `docs/architecture.md` (with Mermaid diagrams)
-  - `docs/database-design.md` (with shard keys, schemas, index definitions)
-  - `docs/algorithms.md` (pseudocode and complexity analysis)
-  - `docs/performance-evaluation.md` (JMeter test methodology, workloads, metrics)
-  - `docs/scalability-and-failure-analysis.md` (Experiments A through F)
-  - `docs/demo-guide.md` (step-by-step walkthrough)
-  - `docs/security-and-limitations.md`
-- Created `README.md` with complete setup instructions, demo credentials, architecture summary, and API reference.
-- Created `reports/performance/` with JMeter test plan (`scalable-banking-benchmark.jmx`) and execution scripts (`run-benchmarks.sh`, `run-benchmarks.bat`).
-- Completed memory files: `PROJECT_STATE.md`, `NEXT_STEPS.md`, `DECISIONS.md`.
+- Updated `AccountService`, `TransferService`, and `BillPaymentService` with shard-key targeted balance updates via `mongoTemplate.updateFirst`.
+- Refined sharded entity indexes to avoid non-shard-key unique index constraints in native MongoDB sharding.
+- Added `/api/shorten` and `/api/consistent-hash` aliases and flexible request mappings.
+- Generated complete JMeter HTML benchmark report dashboards and raw JTL logs in `reports/performance/`.
+- Updated ADR records in `DECISIONS.md` (ADR-009, ADR-010).
 
 ---
 
 ## Exact Next Action
-Stage all created documentation and updated memory files into Git, commit on branch `member-1`, and present the final handover report to the user.
+Commit all updates to branch `member-1` and deliver the comprehensive handover report to the user.

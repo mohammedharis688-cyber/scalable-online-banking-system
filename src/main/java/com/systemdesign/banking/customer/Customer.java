@@ -12,10 +12,10 @@ public class Customer {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @Indexed
     private String customerId;
 
-    @Indexed(unique = true)
+    @Indexed
     private String email;
 
     private String passwordHash;

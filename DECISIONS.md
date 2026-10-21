@@ -122,3 +122,23 @@
   - Redis set `crawler:visited` stores unique URLs to prevent redundant processing.
   - Jsoup parses HTML, extracts structured biller names, categories, and account numbers, and updates the local catalogue.
 - **Consequences**: 100% safe, reproducible, offline crawler demonstration.
+
+---
+
+### ADR-009: Targeted Shard-Key Balance Updates in MongoDB Sharded Cluster
+- **Status**: ACCEPTED
+- **Context**: In native MongoDB sharded clusters, document update operations must include the exact shard key (`accountNumber`) in the query criteria or route through full document replacements. Otherwise, mongos rejects updates with multi-shard scatter errors when write targeting is ambiguous.
+- **Decision**:
+  - Implemented `AccountService.updateBalance(accountNumber, newBalance)` using `mongoTemplate.updateFirst` with explicit shard key query criteria `Criteria.where("accountNumber").is(accountNumber)`.
+  - Refactored `TransferService` and `BillPaymentService` to delegate balance mutation exclusively through this shard-aware method.
+- **Consequences**: Eliminates mongos update routing exceptions in distributed sharded deployments while maintaining atomicity within the active multi-document transaction.
+
+---
+
+### ADR-010: Sharded Collection Unique Index Constraints
+- **Status**: ACCEPTED
+- **Context**: MongoDB native sharding strictly prohibits unique secondary indexes on fields that do not prefix the collection's shard key, because enforcement across independent replica set shards would require distributed inter-shard cross-checks on every insert.
+- **Decision**:
+  - Maintained hashed shard keys on primary identifiers (`customerId`, `accountNumber`, `transactionId`, `ledgerId`).
+  - Adjusted secondary fields (such as `paymentReference`, `transactionReference`, `email`) to standard indexed status (`@Indexed`), handling unique reference invariants at the application service and idempotency key layer.
+- **Consequences**: Flawless collection sharding and shard-key initialization on native MongoDB clusters without index creation collisions.

@@ -17,16 +17,25 @@ public class CrawlerController {
     }
 
     @PostMapping("/start")
-    public ResponseEntity<?> startCrawl(@RequestBody(required = false) Map<String, Object> request) {
-        String seedUrl = "/synthetic/page1.html";
-        int maxPages = 20;
+    public ResponseEntity<?> startCrawl(
+            @RequestParam(name = "seedUrl", required = false) String seedUrlParam,
+            @RequestParam(name = "maxPages", required = false, defaultValue = "20") int maxPagesParam,
+            @RequestBody(required = false) String bodyString) {
+        String seedUrl = seedUrlParam != null ? seedUrlParam : "/synthetic/page1.html";
+        int maxPages = maxPagesParam;
 
-        if (request != null) {
-            if (request.containsKey("seedUrl")) {
-                seedUrl = request.get("seedUrl").toString();
-            }
-            if (request.containsKey("maxPages")) {
-                maxPages = Integer.parseInt(request.get("maxPages").toString());
+        if (bodyString != null && !bodyString.isBlank()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = mapper.readValue(bodyString, Map.class);
+                if (map.containsKey("seedUrl")) {
+                    seedUrl = map.get("seedUrl").toString();
+                }
+                if (map.containsKey("maxPages")) {
+                    maxPages = Integer.parseInt(map.get("maxPages").toString());
+                }
+            } catch (Exception ignored) {
             }
         }
 

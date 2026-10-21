@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/system/consistent-hash")
+@RequestMapping({"/api/system/consistent-hash", "/api/consistent-hash"})
 public class ConsistentHashingController {
 
     private final ConsistentHashRouter router;
@@ -20,6 +20,7 @@ public class ConsistentHashingController {
         return ResponseEntity.ok(Map.of(
                 "nodes", router.getNodes(),
                 "nodeCount", router.getNodes().size(),
+                "totalNodes", router.getNodes().size(),
                 "virtualNodesTotal", router.getRingSize()
         ));
     }
@@ -29,7 +30,8 @@ public class ConsistentHashingController {
         String node = router.routeKey(key);
         return ResponseEntity.ok(Map.of(
                 "routingKey", key,
-                "assignedNode", node
+                "assignedNode", node,
+                "targetNode", node
         ));
     }
 

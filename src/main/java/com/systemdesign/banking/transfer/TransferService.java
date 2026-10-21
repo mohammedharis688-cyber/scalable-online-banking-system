@@ -3,6 +3,7 @@ package com.systemdesign.banking.transfer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.systemdesign.banking.account.Account;
 import com.systemdesign.banking.account.AccountRepository;
+import com.systemdesign.banking.account.AccountService;
 import com.systemdesign.banking.ledger.LedgerEntry;
 import com.systemdesign.banking.ledger.LedgerRepository;
 import com.systemdesign.banking.notification.OutboxEvent;
@@ -27,16 +28,19 @@ public class TransferService {
     private final LedgerRepository ledgerRepository;
     private final OutboxRepository outboxRepository;
     private final UniqueIdGenerator idGenerator;
+    private final AccountService accountService;
     private final ObjectMapper objectMapper;
 
     public TransferService(
             AccountRepository accountRepository,
+            AccountService accountService,
             TransactionRepository transactionRepository,
             LedgerRepository ledgerRepository,
             OutboxRepository outboxRepository,
             UniqueIdGenerator idGenerator,
             ObjectMapper objectMapper) {
         this.accountRepository = accountRepository;
+        this.accountService = accountService;
         this.transactionRepository = transactionRepository;
         this.ledgerRepository = ledgerRepository;
         this.outboxRepository = outboxRepository;
@@ -117,8 +121,8 @@ public class TransferService {
         sourceAccount.setBalance(newSourceBalance);
         destAccount.setBalance(newDestBalance);
 
-        accountRepository.save(sourceAccount);
-        accountRepository.save(destAccount);
+        accountService.updateBalance(sourceAccount.getAccountNumber(), newSourceBalance);
+        accountService.updateBalance(destAccount.getAccountNumber(), newDestBalance);
 
         // 6. Generate Transaction Record
         String txnId = idGenerator.generateTransactionReference();

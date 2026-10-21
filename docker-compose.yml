@@ -101,7 +101,7 @@ services:
     container_name: mongos
     command: mongos --configdb rs-cfg/mongo-configsvr:27019 --bind_ip_all --port 27017
     ports:
-      - "27017:27017"
+      - "27117:27017"
     networks:
       - banking-network
     depends_on:
@@ -228,6 +228,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
     networks:
       - banking-network
     restart: unless-stopped

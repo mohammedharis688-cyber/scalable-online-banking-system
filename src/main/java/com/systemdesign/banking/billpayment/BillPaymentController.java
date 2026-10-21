@@ -30,13 +30,17 @@ public class BillPaymentController {
             @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal CustomerPrincipal principal) {
         try {
-            String sourceAccount = (String) request.get("sourceAccountNumber");
-            String billerCode = (String) request.get("billerCode");
+            String sourceAccount = request.get("sourceAccountNumber") != null
+                    ? (String) request.get("sourceAccountNumber")
+                    : (String) request.get("accountNumber");
+            String billerCode = request.get("billerCode") != null
+                    ? (String) request.get("billerCode")
+                    : (String) request.get("billerId");
             String consumerRef = (String) request.get("consumerReference");
             Object amountObj = request.get("amount");
 
             if (sourceAccount == null || billerCode == null || consumerRef == null || amountObj == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "All fields are required"));
+                return ResponseEntity.badRequest().body(Map.of("error", "All fields are required (sourceAccountNumber, billerCode, consumerReference, amount)"));
             }
 
             BigDecimal amount = new BigDecimal(amountObj.toString());

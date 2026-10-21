@@ -64,9 +64,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/system/**",
                                 "/api/shortener/**",
+                                "/api/shorten/**",
                                 "/s/**",
                                 "/api/autocomplete/**",
-                                "/api/crawler/**"
+                                "/api/crawler/**",
+                                "/api/consistent-hash/**",
+                                "/actuator/**"
                         ).permitAll()
                         // Protected Core Banking APIs
                         .requestMatchers(

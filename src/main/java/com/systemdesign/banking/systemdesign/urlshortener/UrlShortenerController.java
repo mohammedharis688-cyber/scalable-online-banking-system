@@ -18,11 +18,13 @@ public class UrlShortenerController {
         this.shortenerService = shortenerService;
     }
 
-    @PostMapping("/api/shortener")
+    @PostMapping({"/api/shortener", "/api/shorten"})
     public ResponseEntity<?> createShortUrl(@RequestBody Map<String, String> request) {
-        String targetUrl = request.get("targetUrl");
+        String targetUrl = request.get("targetUrl") != null
+                ? request.get("targetUrl")
+                : request.get("originalUrl");
         if (targetUrl == null || targetUrl.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "targetUrl is required"));
+            return ResponseEntity.badRequest().body(Map.of("error", "targetUrl or originalUrl is required"));
         }
 
         try {
@@ -30,6 +32,7 @@ public class UrlShortenerController {
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "shortCode", mapping.getShortCode(),
                     "targetUrl", mapping.getTargetUrl(),
+                    "originalUrl", mapping.getTargetUrl(),
                     "shortUrl", "/s/" + mapping.getShortCode(),
                     "createdAt", mapping.getCreatedAt()
             ));
