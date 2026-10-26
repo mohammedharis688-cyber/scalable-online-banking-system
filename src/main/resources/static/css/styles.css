@@ -197,19 +197,23 @@ html, body {
   max-width: 440px;
 }
 
+input[type="text"].search-input-box,
+input.search-input-box,
 .search-input-box {
   width: 100%;
-  height: 36px;
+  height: 38px;
   background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0 0.75rem 0 2.25rem;
+  padding: 0 2.5rem 0 2.85rem !important; /* Ample 45px left padding ensures text starts well past the 18px icon at 12px */
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--text-primary);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+input[type="text"].search-input-box:focus,
+input.search-input-box:focus,
 .search-input-box:focus {
   outline: none;
   border-color: var(--border-focus);
@@ -218,16 +222,24 @@ html, body {
 
 .search-icon-left {
   position: absolute;
-  left: 0.65rem;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+  z-index: 2;
 }
 
 .search-clear-btn {
   position: absolute;
-  right: 0.5rem;
+  right: 0.65rem;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
@@ -237,6 +249,7 @@ html, body {
   padding: 2px;
   border-radius: 50%;
   display: none;
+  z-index: 3;
 }
 
 .search-clear-btn:hover {
@@ -256,6 +269,7 @@ html, body {
   padding: 1px 4px;
   color: var(--text-muted);
   pointer-events: none;
+  z-index: 2;
 }
 
 /* Autocomplete Suggestion Flyout Dropdown */
@@ -1229,8 +1243,10 @@ tbody tr:hover {
 
 @media (max-width: 768px) {
   .header-inner {
-    padding: 0 1rem;
-    height: 56px;
+    padding: 0.5rem 1rem;
+    min-height: 56px;
+    height: auto;
+    flex-wrap: wrap;
   }
   .header-search-wrapper {
     max-width: none;

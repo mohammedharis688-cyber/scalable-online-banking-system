@@ -64,5 +64,8 @@ public class BeneficiaryService {
         Beneficiary beneficiary = beneficiaryRepository.findByIdAndCustomerId(id, customerId)
                 .orElseThrow(() -> new IllegalArgumentException("Beneficiary not found or unauthorized"));
         beneficiaryRepository.delete(beneficiary);
+        if (autocompleteService != null) {
+            autocompleteService.refreshIndex();
+        }
     }
 }

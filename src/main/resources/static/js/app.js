@@ -163,13 +163,14 @@ function updateNavState() {
     if (logoutBtn) logoutBtn.style.display = isAuth ? 'inline-flex' : 'none';
     if (userDisplay) userDisplay.style.display = isAuth ? 'inline-flex' : 'none';
 
-    if (isAuth && state.user) {
+    if (isAuth) {
         const userNameEl = document.getElementById('user-name');
         const userAvatarEl = document.getElementById('user-avatar');
-        if (userNameEl) userNameEl.textContent = state.user.fullName;
+        const displayName = (state.user && state.user.fullName) ? state.user.fullName : ((state.user && state.user.email) ? state.user.email : 'My Account');
+        if (userNameEl) userNameEl.textContent = displayName;
         if (userAvatarEl) {
-            const initials = state.user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            userAvatarEl.textContent = initials || 'CU';
+            const initials = displayName.split(/[\s@._-]+/).map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase();
+            userAvatarEl.textContent = initials || 'NL';
         }
     }
 }
@@ -902,7 +903,7 @@ function setTransferRecipient(name, accountNumber) {
         if (cardName) cardName.textContent = name;
         if (cardAcc) cardAcc.textContent = accountNumber;
         if (cardAvatar) {
-            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const initials = name ? name.split(/[\s@._-]+/).map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() : 'RE';
             cardAvatar.textContent = initials || 'RE';
         }
         card.style.display = 'flex';
@@ -929,14 +930,22 @@ function clearTransferRecipient() {
 async function handleTransferSubmit(e) {
     e.preventDefault();
     const sourceAccountNumber = document.getElementById('transfer-source-account').value;
-    const destinationAccountNumber = document.getElementById('transfer-dest-account').value.trim();
+    let destinationAccountNumber = document.getElementById('transfer-dest-account').value.trim();
+    if (!destinationAccountNumber) {
+        const directInput = document.getElementById('transfer-recipient-search-input')?.value?.trim();
+        if (directInput && (directInput.toUpperCase().startsWith('ACC-') || /^[A-Z0-9-]+$/i.test(directInput))) {
+            destinationAccountNumber = directInput;
+            document.getElementById('transfer-dest-account').value = directInput;
+        }
+    }
+
     const amount = document.getElementById('transfer-amount').value;
     const description = document.getElementById('transfer-description').value;
     const idempotencyKey = document.getElementById('transfer-idempotency-key').value;
     const btn = document.getElementById('btn-transfer-submit');
 
     if (!destinationAccountNumber) {
-        showToast('Please search and select a verified recipient destination', 'error');
+        showToast('Please search and select a verified recipient destination or enter an account number', 'error');
         return;
     }
 

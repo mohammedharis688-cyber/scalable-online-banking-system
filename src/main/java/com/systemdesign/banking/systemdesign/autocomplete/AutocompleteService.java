@@ -42,6 +42,7 @@ public class AutocompleteService {
         List<Biller> billers = billerRepository.findAll();
         for (Biller biller : billers) {
             trie.insert(biller.getName(), biller.getCategory(), biller.getBillerCode(), 100);
+            trie.insert(biller.getCategory(), biller.getCategory(), biller.getBillerCode(), 95);
             trie.insert(biller.getBillerCode(), biller.getCategory(), biller.getBillerCode(), 90);
         }
         List<Beneficiary> beneficiaries = beneficiaryRepository.findAll();
@@ -54,10 +55,23 @@ public class AutocompleteService {
     public void addTerm(String term, String category, String referenceCode, int score) {
         trie.insert(term, category, referenceCode, score);
         // Invalidate cached suggestions for prefixes matching the term
-        if (term != null && term.length() >= 2) {
-            String prefix = term.substring(0, 2).toLowerCase();
-            cacheService.evict("cache:autocomplete:" + prefix);
+        if (term != null && !term.isBlank()) {
+            String normalized = term.trim().toLowerCase();
+            for (int len = 1; len <= Math.min(normalized.length(), 4); len++) {
+                String prefix = normalized.substring(0, len);
+                cacheService.evict("cache:autocomplete:" + prefix);
+            }
         }
+    }
+
+    /**
+     * Safely refreshes the in-memory Trie index from database repositories
+     * and clears stale cache entries.
+     */
+    public synchronized void refreshIndex() {
+        log.info("Refreshing Trie autocomplete index from authoritative repositories...");
+        trie.clear();
+        initTrieFromDatabase();
     }
 
     /**

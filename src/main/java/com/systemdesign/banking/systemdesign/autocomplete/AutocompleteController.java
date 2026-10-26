@@ -27,4 +27,13 @@ public class AutocompleteController {
     public ResponseEntity<?> getMetrics() {
         return ResponseEntity.ok(autocompleteService.getMetrics());
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshIndex() {
+        autocompleteService.refreshIndex();
+        return ResponseEntity.ok(Map.of(
+                "message", "Trie autocomplete index successfully refreshed from database",
+                "timestamp", java.time.Instant.now().toString()
+        ));
+    }
 }

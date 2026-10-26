@@ -170,9 +170,17 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         // 7. Seed Terms into Trie Autocomplete
         autocompleteService.addTerm("Apex City Power & Electric", "ELECTRICITY", "ELEC-01", 100);
+        autocompleteService.addTerm("Electricity", "ELECTRICITY", "ELEC-01", 95);
+        autocompleteService.addTerm("ELEC-01", "ELECTRICITY", "ELEC-01", 90);
         autocompleteService.addTerm("Metropolitan Water Works", "WATER", "WATER-01", 100);
+        autocompleteService.addTerm("Water", "WATER", "WATER-01", 95);
+        autocompleteService.addTerm("WATER-01", "WATER", "WATER-01", 90);
         autocompleteService.addTerm("FiberLink High-Speed Internet", "INTERNET", "NET-01", 100);
+        autocompleteService.addTerm("Internet", "INTERNET", "NET-01", 95);
+        autocompleteService.addTerm("NET-01", "INTERNET", "NET-01", 90);
         autocompleteService.addTerm("Apex Cellular Mobile", "MOBILE", "MOB-01", 100);
+        autocompleteService.addTerm("Mobile", "MOBILE", "MOB-01", 95);
+        autocompleteService.addTerm("MOB-01", "MOBILE", "MOB-01", 90);
         autocompleteService.addTerm("Alice Smith", "BENEFICIARY", "ACC-1001-10000002", 90);
         autocompleteService.addTerm("Bob Jones", "BENEFICIARY", "ACC-1001-10000003", 90);
 

@@ -58,8 +58,8 @@
                 </button>
 
                 <div id="user-display" class="user-profile-badge" style="display: none;">
-                    <div class="avatar-circle" id="user-avatar">JD</div>
-                    <span id="user-name" style="font-weight: 500;">Customer</span>
+                    <div class="avatar-circle" id="user-avatar">NL</div>
+                    <span id="user-name" style="font-weight: 500;">My Account</span>
                 </div>
 
                 <button id="logout-btn" class="btn btn-secondary btn-sm" onclick="logout()" style="display: none;">
@@ -122,21 +122,21 @@
                         <p style="font-size: 13px; color: var(--text-secondary);">Scalable Online Banking System & Laboratory Portal</p>
                     </div>
 
-                    <!-- Pre-Seeded Demo Logins Container -->
+                    <!-- Pre-Configured Test Accounts -->
                     <div style="background: var(--surface-low); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem;">
-                        <span class="label-caps" style="display: block; margin-bottom: 0.5rem;">Quick Demo Profiles (Pre-Seeded)</span>
+                        <span class="label-caps" style="display: block; margin-bottom: 0.5rem;">Pre-Configured Test Accounts</span>
                         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                             <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('john.doe@example.com', 'Password123!')">
-                                <span class="avatar-circle" style="width: 18px; height: 18px; font-size: 9px;">JD</span>
-                                John Doe (₹50,000 INR) — john.doe@example.com
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 1 — john.doe@example.com
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('alice.smith@example.com', 'Password123!')">
-                                <span class="avatar-circle" style="width: 18px; height: 18px; font-size: 9px;">AS</span>
-                                Alice Smith (₹75,000 INR) — alice.smith@example.com
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 2 — alice.smith@example.com
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('bob.jones@example.com', 'Password123!')">
-                                <span class="avatar-circle" style="width: 18px; height: 18px; font-size: 9px;">BJ</span>
-                                Bob Jones (₹25,000 INR) — bob.jones@example.com
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 3 — bob.jones@example.com
                             </button>
                         </div>
                     </div>
@@ -169,11 +169,11 @@
                     <form id="register-form" onsubmit="handleRegister(event)" style="display: none;">
                         <div class="form-group">
                             <label for="reg-name">Full Legal Name</label>
-                            <input type="text" id="reg-name" required placeholder="e.g. David Miller">
+                            <input type="text" id="reg-name" required placeholder="Full legal name">
                         </div>
                         <div class="form-group">
                             <label for="reg-email">Email Address</label>
-                            <input type="email" id="reg-email" required placeholder="e.g. david.miller@example.com">
+                            <input type="email" id="reg-email" required placeholder="customer@example.com">
                         </div>
                         <div class="form-group">
                             <label for="reg-password">Password (Min 6 chars)</label>
@@ -181,10 +181,10 @@
                         </div>
                         <div class="form-group">
                             <label for="reg-phone">Phone Number</label>
-                            <input type="text" id="reg-phone" placeholder="+91-9876543210">
+                            <input type="text" id="reg-phone" placeholder="+91-XXXXXXXXXX">
                         </div>
                         <div class="form-group">
-                            <label for="reg-deposit">Initial Synthetic Deposit (₹ INR)</label>
+                            <label for="reg-deposit">Initial Deposit (₹ INR)</label>
                             <input type="number" id="reg-deposit" value="5000" min="500" step="100">
                         </div>
                         <button type="submit" id="btn-register-submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
@@ -284,7 +284,7 @@
                             </tr>
                         </thead>
                         <tbody id="dash-recent-tx-tbody">
-                            <tr><td colspan="7" class="autocomplete-state-msg">Loading transactions...</td></tr>
+                            <tr><td colspan="7" class="autocomplete-state-msg">No transactions yet</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -347,7 +347,7 @@
                                 <input type="text"
                                        id="transfer-recipient-search-input"
                                        class="search-input-box"
-                                       placeholder="Type recipient name (e.g. 'Alice', 'Bob') or account number..."
+                                       placeholder="Search recipient name or account number..."
                                        autocomplete="off"
                                        aria-autocomplete="list"
                                        aria-expanded="false"
@@ -364,10 +364,10 @@
                             <!-- Verified Recipient Selected Card -->
                             <div id="transfer-verified-recipient-card" class="verified-recipient-card" style="display: none;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div class="recipient-avatar-box" id="verified-recipient-avatar">AS</div>
+                                    <div class="recipient-avatar-box" id="verified-recipient-avatar">--</div>
                                     <div>
-                                        <div style="font-weight: 600; font-size: 13px;" id="verified-recipient-name">Alice Smith</div>
-                                        <div class="mono" style="font-size: 12px; color: var(--text-secondary);" id="verified-recipient-acc">ACC-1001-10000002</div>
+                                        <div style="font-weight: 600; font-size: 13px;" id="verified-recipient-name">Recipient</div>
+                                        <div class="mono" style="font-size: 12px; color: var(--text-secondary);" id="verified-recipient-acc">Account Number</div>
                                     </div>
                                 </div>
                                 <span class="badge badge-success">
@@ -421,7 +421,7 @@
                         <!-- Step 4: Audit Memo & Reference -->
                         <div class="form-group">
                             <label for="transfer-description">04 · Audit Memo & Reference (Optional)</label>
-                            <input type="text" id="transfer-description" value="Consulting settlement" placeholder="Add internal transfer reference">
+                            <input type="text" id="transfer-description" placeholder="Add internal transfer reference (optional)">
                         </div>
 
                         <!-- Step 5: Cryptographic Idempotency Safe-State -->
@@ -506,7 +506,7 @@
                         </div>
                         <div class="form-group">
                             <label for="bill-consumer-ref">Consumer Account / Meter Reference</label>
-                            <input type="text" id="bill-consumer-ref" required placeholder="e.g. METER-884920">
+                            <input type="text" id="bill-consumer-ref" required placeholder="Consumer or meter reference">
                         </div>
                         <div class="form-group">
                             <label for="bill-source-account">Debiting Account</label>
@@ -601,7 +601,7 @@
                             </tr>
                         </thead>
                         <tbody id="history-table-tbody">
-                            <tr><td colspan="9" class="autocomplete-state-msg">Loading transaction ledger...</td></tr>
+                            <tr><td colspan="9" class="autocomplete-state-msg">No transactions yet</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -907,11 +907,11 @@
             <form onsubmit="handleAddBeneficiarySubmit(event)">
                 <div class="form-group">
                     <label for="ben-name">Beneficiary Full Name</label>
-                    <input type="text" id="ben-name" required placeholder="e.g. Alice Smith">
+                    <input type="text" id="ben-name" required placeholder="Full legal name">
                 </div>
                 <div class="form-group">
                     <label for="ben-account">Internal Account Number</label>
-                    <input type="text" id="ben-account" required placeholder="e.g. ACC-1001-10000002">
+                    <input type="text" id="ben-account" required placeholder="ACC-XXXX-XXXXXXXX">
                 </div>
                 <div class="form-group">
                     <label for="ben-bank">Bank Name</label>

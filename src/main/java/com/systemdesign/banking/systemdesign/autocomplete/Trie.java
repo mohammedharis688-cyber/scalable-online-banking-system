@@ -56,4 +56,10 @@ public class Trie {
         }
         return results;
     }
+
+    public synchronized void clear() {
+        root.getChildren().clear();
+        root.getSuggestions().clear();
+        root.setEndOfWord(false);
+    }
 }
