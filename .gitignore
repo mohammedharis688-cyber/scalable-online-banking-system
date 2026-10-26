@@ -47,3 +47,6 @@ Desktop.ini
 mongo-data/
 redis-data/
 kafka-data/
+
+# Temporary scratch scripts
+scratch/

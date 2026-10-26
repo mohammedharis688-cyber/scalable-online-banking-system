@@ -1,0 +1,237 @@
+version: '3.8'
+
+networks:
+  banking-network:
+    driver: bridge
+
+volumes:
+  mongo-cfg-data:
+  mongo-shard1-data:
+  mongo-shard2-data:
+  mongo-shard3-data:
+  redis-data:
+  kafka-data:
+
+services:
+  # ==========================================
+  # MongoDB Config Server Replica Set
+  # ==========================================
+  mongo-configsvr:
+    image: mongo:7.0
+    container_name: mongo-configsvr
+    command: mongod --configsvr --replSet rs-cfg --port 27019 --bind_ip_all
+    ports:
+      - "27019:27019"
+    volumes:
+      - mongo-cfg-data:/data/db
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================
+  # MongoDB Shard 1 Replica Set
+  # ==========================================
+  mongo-shard1:
+    image: mongo:7.0
+    container_name: mongo-shard1
+    command: mongod --shardsvr --replSet rs-shard1 --port 27018 --bind_ip_all
+    ports:
+      - "27018:27018"
+    volumes:
+      - mongo-shard1-data:/data/db
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================
+  # MongoDB Shard 2 Replica Set
+  # ==========================================
+  mongo-shard2:
+    image: mongo:7.0
+    container_name: mongo-shard2
+    command: mongod --shardsvr --replSet rs-shard2 --port 27018 --bind_ip_all
+    ports:
+      - "27028:27018"
+    volumes:
+      - mongo-shard2-data:/data/db
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================
+  # MongoDB Shard 3 Replica Set
+  # ==========================================
+  mongo-shard3:
+    image: mongo:7.0
+    container_name: mongo-shard3
+    command: mongod --shardsvr --replSet rs-shard3 --port 27018 --bind_ip_all
+    ports:
+      - "27038:27018"
+    volumes:
+      - mongo-shard3-data:/data/db
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================
+  # Mongos Query Router
+  # ==========================================
+  mongos:
+    image: mongo:7.0
+    container_name: mongos
+    command: mongos --configdb rs-cfg/mongo-configsvr:27019 --bind_ip_all --port 27017
+    ports:
+      - "27117:27017"
+    networks:
+      - banking-network
+    depends_on:
+      mongo-configsvr:
+        condition: service_healthy
+      mongo-shard1:
+        condition: service_healthy
+      mongo-shard2:
+        condition: service_healthy
+      mongo-shard3:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27017", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  # ==========================================
+  # MongoDB Sharding Cluster Initializer
+  # ==========================================
+  mongo-init:
+    image: mongo:7.0
+    container_name: mongo-init
+    volumes:
+      - ./docker/init-cluster.sh:/init-cluster.sh:ro
+    entrypoint: ["/bin/bash", "/init-cluster.sh"]
+    networks:
+      - banking-network
+    depends_on:
+      mongos:
+        condition: service_started
+    restart: "no"
+
+  # ==========================================
+  # Redis Key-Value Store & Rate Limiter
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: banking-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ==========================================
+  # Apache Kafka (KRaft mode)
+  # ==========================================
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: banking-kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - banking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  # ==========================================
+  # Kafka Topic Initializer
+  # ==========================================
+  kafka-init:
+    image: apache/kafka:3.8.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic bank.notifications --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic bank.audit --partitions 3 --replication-factor 1 &&
+      echo 'Kafka topics created.'
+      "
+    networks:
+      - banking-network
+    restart: "no"
+
+  # ==========================================
+  # Scalable Online Banking Spring Boot App
+  # ==========================================
+  banking-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: banking-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongos:27017/banking_db
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      mongos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - banking-network
+    restart: unless-stopped

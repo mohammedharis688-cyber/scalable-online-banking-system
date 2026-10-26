@@ -5,7 +5,7 @@
 - **Status**: ACCEPTED
 - **Context**: UCS3513 requires Java, Spring Boot, MongoDB sharding, Redis, Kafka, Docker Compose, JMeter, and vanilla HTML/CSS/JS. Java 26 / JDK 24 is installed locally.
 - **Decision**:
-  - Spring Boot version: `3.4.3` (or latest compatible Spring Boot 3.4.x).
+  - Spring Boot version: `3.4.3`
   - Java version: 21+ source/target compatibility (tested on local Java 26).
   - Maven Wrapper: included directly in the repo for reproducible builds.
   - Dependencies:
@@ -17,7 +17,6 @@
     - `spring-boot-starter-validation`
     - `jjwt-api` / `jjwt-impl` / `jjwt-jackson` (0.12.6) for stateless JWT auth
     - `jsoup` (1.18.3) for local HTML crawler parsing
-    - `redisson` or Jedis/Lettuce for Redis Lua scripts
 - **Consequences**: Zero external frontend frameworks; all assets served from `src/main/resources/static`. Zero relational database dependencies.
 
 ---
@@ -91,3 +90,66 @@
     - Spring Kafka `@KafkaListener` receives the message, creates the persistent in-app notification in MongoDB `notifications` collection.
   - The frontend queries `GET /api/notifications` to display user notifications with unread badge and mark-as-read capability.
 - **Consequences**: Zero message loss, eventual consistency for notifications, decoupled financial path.
+
+---
+
+### ADR-006: JDK 26 Dynamic Agent & Byte Buddy Compatibility
+- **Status**: ACCEPTED
+- **Context**: The development machine runs Oracle JDK 26. Mockito inline mock maker attempts dynamic self-attachment of Byte Buddy agent, which triggers warnings or requires explicit VM arguments in recent JDKs.
+- **Decision**:
+  - Configured `maven-surefire-plugin` with `<argLine>-Dnet.bytebuddy.experimental=true</argLine>`.
+  - Pinned Byte Buddy 1.15.11 and Mockito 5.14.2 for robust test isolation.
+- **Consequences**: Flawless automated JUnit 5 test runs across all JDK 21+ environments including JDK 26.
+
+---
+
+### ADR-007: Trie Prefix Autocomplete with Redis Cache-Aside
+- **Status**: ACCEPTED
+- **Context**: Experiment 7 requires Trie-based autocomplete for biller search and beneficiary search.
+- **Decision**:
+  - Pure Java Trie data structure supporting case-insensitive prefix search, frequency ranking, and result limits.
+  - Redis key `autocomplete:cache:<normalized_prefix>` stores JSON array of top suggestions with a 10-minute TTL.
+  - When new billers or beneficiaries are created, matching prefix cache entries are invalidated or refreshed.
+- **Consequences**: Sub-millisecond lookup latency; minimal overhead on primary database.
+
+---
+
+### ADR-008: Local Synthetic Web Crawler for Biller Catalog
+- **Status**: ACCEPTED
+- **Context**: Experiment 8 requires a web crawler for catalog discovery. To prevent SSRF (Server-Side Request Forgery) and avoid hitting external bank endpoints, strict boundaries are required.
+- **Decision**:
+  - Crawler operates solely on internal static resources under `/synthetic/*.html`.
+  - Redis set `crawler:visited` stores unique URLs to prevent redundant processing.
+  - Jsoup parses HTML, extracts structured biller names, categories, and account numbers, and updates the local catalogue.
+- **Consequences**: 100% safe, reproducible, offline crawler demonstration.
+
+---
+
+### ADR-009: Targeted Shard-Key Balance Updates in MongoDB Sharded Cluster
+- **Status**: ACCEPTED
+- **Context**: In native MongoDB sharded clusters, document update operations must include the exact shard key (`accountNumber`) in the query criteria or route through full document replacements. Otherwise, mongos rejects updates with multi-shard scatter errors when write targeting is ambiguous.
+- **Decision**:
+  - Implemented `AccountService.updateBalance(accountNumber, newBalance)` using `mongoTemplate.updateFirst` with explicit shard key query criteria `Criteria.where("accountNumber").is(accountNumber)`.
+  - Refactored `TransferService` and `BillPaymentService` to delegate balance mutation exclusively through this shard-aware method.
+- **Consequences**: Eliminates mongos update routing exceptions in distributed sharded deployments while maintaining atomicity within the active multi-document transaction.
+
+---
+
+### ADR-010: Sharded Collection Unique Index Constraints
+- **Status**: ACCEPTED
+- **Context**: MongoDB native sharding strictly prohibits unique secondary indexes on fields that do not prefix the collection's shard key, because enforcement across independent replica set shards would require distributed inter-shard cross-checks on every insert.
+- **Decision**:
+  - Maintained hashed shard keys on primary identifiers (`customerId`, `accountNumber`, `transactionId`, `ledgerId`).
+  - Adjusted secondary fields (such as `paymentReference`, `transactionReference`, `email`) to standard indexed status (`@Indexed`), handling unique reference invariants at the application service and idempotency key layer.
+- **Consequences**: Flawless collection sharding and shard-key initialization on native MongoDB clusters without index creation collisions.
+
+---
+
+### ADR-011: Pre-Sharding Distributed Collections for Multi-Document Transactions
+- **Status**: ACCEPTED
+- **Context**: In native MongoDB sharded clusters, multi-document transactions cannot implicitly create collections dynamically. Attempting to write to an uncreated collection during an active distributed transaction aborts with MongoDB error 13388 (`StaleConfig`: cluster data placement change / sharding status not known).
+- **Decision**:
+  - All transactional collections (`customers`, `accounts`, `transactions`, `ledgers`, and `bill_payments`) are explicitly pre-created with their corresponding hashed shard key index and sharded during cluster bootstrap in `docker/init-cluster.sh`.
+  - Configured `SecurityConfig` to permit `/error` and exact base URL paths so framework errors and public design endpoints are never masked by 401 Unauthorized exceptions.
+- **Consequences**: Zero transaction aborts during distributed fund transfers and bill payments; transparent routing across all three shards.
+

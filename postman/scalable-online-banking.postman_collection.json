@@ -1,0 +1,303 @@
+{
+  "info": {
+    "name": "Scalable Online Banking System API — UCS3513",
+    "description": "Comprehensive Postman test collection covering Authentication, Accounts, Transfers, Bill Payments, Beneficiaries, Notifications, and System Design Modules (Rate Limiting, Consistent Hashing, ID Benchmark, Autocomplete, URL Shortener, Crawler).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register New Customer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Demo Customer\",\n  \"email\": \"postman.customer@example.com\",\n  \"password\": \"Password123!\",\n  \"phoneNumber\": \"+91-9876500001\",\n  \"initialDeposit\": 10000.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login as John Doe (Captures Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "    pm.environment.set(\"customerId\", jsonData.customerId);",
+                  "    pm.environment.set(\"sourceAccount\", jsonData.primaryAccountNumber);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Authenticated Customer Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Accounts & Balances",
+      "item": [
+        {
+          "name": "List Customer Accounts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts", "host": ["{{baseUrl}}"], "path": ["api", "accounts"] }
+          }
+        },
+        {
+          "name": "Authoritative Balance Enquiry",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/{{sourceAccount}}/balance", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "{{sourceAccount}}", "balance"] }
+          }
+        },
+        {
+          "name": "Open Additional Checking Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"CHECKING\",\n  \"initialDeposit\": 5000.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/accounts", "host": ["{{baseUrl}}"], "path": ["api", "accounts"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Beneficiaries",
+      "item": [
+        {
+          "name": "List Beneficiaries",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/beneficiaries", "host": ["{{baseUrl}}"], "path": ["api", "beneficiaries"] }
+          }
+        },
+        {
+          "name": "Add Registered Beneficiary (Alice Smith)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Smith\",\n  \"accountNumber\": \"ACC-1001-10000002\",\n  \"bankName\": \"Apex Reserve Bank\",\n  \"email\": \"alice.smith@example.com\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/beneficiaries", "host": ["{{baseUrl}}"], "path": ["api", "beneficiaries"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Fund Transfers & Consistency",
+      "item": [
+        {
+          "name": "Execute Transfer with Idempotency Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.transactionReference) {",
+                  "    pm.environment.set(\"lastTxnRef\", data.transactionReference);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Idempotency-Key", "value": "IDEMP-POSTMAN-{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceAccountNumber\": \"{{sourceAccount}}\",\n  \"destinationAccountNumber\": \"ACC-1001-10000002\",\n  \"amount\": 500.00,\n  \"description\": \"Postman Integration Transfer Test\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/transfers", "host": ["{{baseUrl}}"], "path": ["api", "transfers"] }
+          }
+        },
+        {
+          "name": "Verify Double-Entry Ledger Audit",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions/{{lastTxnRef}}/audit", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "{{lastTxnRef}}", "audit"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Utility Bill Payments",
+      "item": [
+        {
+          "name": "Get Biller Catalogue (Redis Cache-Aside)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bills/billers", "host": ["{{baseUrl}}"], "path": ["api", "bills", "billers"] }
+          }
+        },
+        {
+          "name": "Pay Electricity Bill (ELEC-01)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceAccountNumber\": \"{{sourceAccount}}\",\n  \"billerCode\": \"ELEC-01\",\n  \"consumerReference\": \"METER-998822\",\n  \"amount\": 1250.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/bills/pay", "host": ["{{baseUrl}}"], "path": ["api", "bills", "pay"] }
+          }
+        },
+        {
+          "name": "Get Bill Payment History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bills/history", "host": ["{{baseUrl}}"], "path": ["api", "bills", "history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Transaction History & Notifications",
+      "item": [
+        {
+          "name": "Get Paginated Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions?page=0&size=10", "host": ["{{baseUrl}}"], "path": ["api", "transactions"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Get In-App Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/notifications", "host": ["{{baseUrl}}"], "path": ["api", "notifications"] }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "read-all"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. System Design Components",
+      "item": [
+        {
+          "name": "Trie Autocomplete Search (/api/autocomplete?prefix=elec)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/autocomplete?prefix=elec&limit=5", "host": ["{{baseUrl}}"], "path": ["api", "autocomplete"], "query": [{ "key": "prefix", "value": "elec" }, { "key": "limit", "value": "5" }] }
+          }
+        },
+        {
+          "name": "Unique ID Generator Benchmark (/api/system/id-benchmark)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/system/id-benchmark?count=10000", "host": ["{{baseUrl}}"], "path": ["api", "system", "id-benchmark"], "query": [{ "key": "count", "value": "10000" }] }
+          }
+        },
+        {
+          "name": "Consistent Hashing Topology Experiment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"ADD\",\n  \"nodeName\": \"banking-srv-node-4\",\n  \"sampleSize\": 1000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/system/consistent-hash/experiment", "host": ["{{baseUrl}}"], "path": ["api", "system", "consistent-hash", "experiment"] }
+          }
+        },
+        {
+          "name": "URL Shortener Create Link",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUrl\": \"/synthetic/page1.html\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/shortener", "host": ["{{baseUrl}}"], "path": ["api", "shortener"] }
+          }
+        },
+        {
+          "name": "Synthetic Web Crawler Start",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seedUrl\": \"/synthetic/page1.html\",\n  \"maxPages\": 10\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/crawler/start", "host": ["{{baseUrl}}"], "path": ["api", "crawler", "start"] }
+          }
+        },
+        {
+          "name": "Token Bucket Rate Limiter Telemetry",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/system/ratelimiter/metrics", "host": ["{{baseUrl}}"], "path": ["api", "system", "ratelimiter", "metrics"] }
+          }
+        },
+        {
+          "name": "MongoDB Sharded Cluster Status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/system/sharding/status", "host": ["{{baseUrl}}"], "path": ["api", "system", "sharding", "status"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northline — Scalable Online Banking System</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+    <!-- ================= Top Navigation Bar ================= -->
+    <header class="app-header">
+        <div class="header-inner">
+            <!-- Brand Identity -->
+            <div class="brand-block" onclick="showSection('dashboard')">
+                <div class="brand-mark">NL</div>
+                <div class="brand-info">
+                    <div class="brand-name">
+                        Northline
+                        <span class="brand-tag">UCS3513</span>
+                    </div>
+                    <span class="brand-sub">Scalable Online Banking</span>
+                </div>
+            </div>
+
+            <!-- Global Search & Autocomplete Input (Visible when Authenticated) -->
+            <div class="header-search-wrapper" id="global-search-container" style="display: none;">
+                <span class="material-symbols-outlined search-icon-left">search</span>
+                <input type="text"
+                       id="global-search-input"
+                       class="search-input-box"
+                       placeholder="Search billers, recipients, accounts, views..."
+                       autocomplete="off"
+                       aria-autocomplete="list"
+                       aria-expanded="false"
+                       role="combobox"
+                       oninput="onGlobalSearchInput(this.value)"
+                       onkeydown="onGlobalSearchKeyDown(event)">
+                <button type="button" id="global-search-clear" class="search-clear-btn" onclick="clearGlobalSearch()" title="Clear search">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+                </button>
+                <span class="search-kbd-hint" id="global-search-hint">/</span>
+                <div id="global-search-dropdown" class="autocomplete-flyout" role="listbox"></div>
+            </div>
+
+            <!-- Header Tools & Session Metadata -->
+            <div class="header-actions">
+                <div class="live-pulse-badge" id="session-pulse" style="display: none;">
+                    <span class="pulse-dot"></span>
+                    <span>Session Verified</span>
+                </div>
+
+                <button id="notif-btn" class="icon-button" onclick="showSection('notifications')" title="Notifications" style="display: none;">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <span id="notif-dot" class="notif-dot"></span>
+                </button>
+
+                <div id="user-display" class="user-profile-badge" style="display: none;">
+                    <div class="avatar-circle" id="user-avatar">NL</div>
+                    <span id="user-name" style="font-weight: 500;">My Account</span>
+                </div>
+
+                <button id="logout-btn" class="btn btn-secondary btn-sm" onclick="logout()" style="display: none;">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">logout</span>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Authenticated Secondary Navigation Substrip -->
+        <nav class="nav-substrip" id="nav-authenticated-menu" style="display: none;">
+            <div class="nav-substrip-inner">
+                <button class="nav-tab-link active" onclick="showSection('dashboard')">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </button>
+                <button class="nav-tab-link" onclick="showSection('accounts')">
+                    <span class="material-symbols-outlined">account_balance_wallet</span>
+                    Accounts
+                </button>
+                <button class="nav-tab-link" onclick="showSection('transfers')">
+                    <span class="material-symbols-outlined">send_money</span>
+                    Fund Transfers
+                </button>
+                <button class="nav-tab-link" onclick="showSection('bills')">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    Bill Payments
+                </button>
+                <button class="nav-tab-link" onclick="showSection('beneficiaries')">
+                    <span class="material-symbols-outlined">group</span>
+                    Beneficiaries
+                </button>
+                <button class="nav-tab-link" onclick="showSection('history')">
+                    <span class="material-symbols-outlined">history</span>
+                    Transactions & Audit
+                </button>
+                <button class="nav-tab-link" onclick="showSection('notifications')">
+                    <span class="material-symbols-outlined">mail</span>
+                    Notifications
+                    <span class="badge badge-neutral" id="unread-count" style="margin-left: 2px;">0</span>
+                </button>
+                <button class="nav-tab-link" onclick="showSection('system-insights')">
+                    <span class="material-symbols-outlined">biotech</span>
+                    System Insights
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ================= Main Content Container ================= -->
+    <main class="main-wrapper">
+
+        <!-- ================= SECTION 1: AUTHENTICATION ================= -->
+        <section id="section-auth" class="page-section active">
+            <div style="max-width: 460px; margin: 2rem auto;">
+                <div class="card" style="box-shadow: var(--shadow-card);">
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <div class="brand-mark" style="width: 44px; height: 44px; margin: 0 auto 0.75rem auto; font-size: 18px;">NL</div>
+                        <h1 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin-bottom: 0.25rem;">Sign In to Northline</h1>
+                        <p style="font-size: 13px; color: var(--text-secondary);">Scalable Online Banking System & Laboratory Portal</p>
+                    </div>
+
+                    <!-- Pre-Configured Test Accounts -->
+                    <div style="background: var(--surface-low); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem;">
+                        <span class="label-caps" style="display: block; margin-bottom: 0.5rem;">Pre-Configured Test Accounts</span>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('john.doe@example.com', 'Password123!')">
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 1 — john.doe@example.com
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('alice.smith@example.com', 'Password123!')">
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 2 — alice.smith@example.com
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" style="justify-content: flex-start;" onclick="fillDemoLogin('bob.jones@example.com', 'Password123!')">
+                                <span class="material-symbols-outlined" style="font-size: 15px; color: var(--text-secondary);">person</span>
+                                Test Account 3 — bob.jones@example.com
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mode Toggle -->
+                    <div class="segmented-control" style="width: 100%; margin-bottom: 1.25rem;">
+                        <button type="button" id="tab-login-btn" class="segmented-btn active" style="flex: 1;" onclick="toggleAuthTab('login')">Customer Login</button>
+                        <button type="button" id="tab-register-btn" class="segmented-btn" style="flex: 1;" onclick="toggleAuthTab('register')">Register New Account</button>
+                    </div>
+
+                    <!-- Login Form -->
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label for="login-email">Customer Email</label>
+                            <input type="email" id="login-email" required placeholder="customer@example.com" autocomplete="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+                        </div>
+                        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                            Sign In to Portal
+                        </button>
+                        <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 0.75rem;">
+                            Protected by Redis Token-Bucket Rate Limiter
+                        </div>
+                    </form>
+
+                    <!-- Registration Form -->
+                    <form id="register-form" onsubmit="handleRegister(event)" style="display: none;">
+                        <div class="form-group">
+                            <label for="reg-name">Full Legal Name</label>
+                            <input type="text" id="reg-name" required placeholder="Full legal name">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email">Email Address</label>
+                            <input type="email" id="reg-email" required placeholder="customer@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password">Password (Min 6 chars)</label>
+                            <input type="password" id="reg-password" minlength="6" required placeholder="••••••••">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-phone">Phone Number</label>
+                            <input type="text" id="reg-phone" placeholder="+91-XXXXXXXXXX">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-deposit">Initial Deposit (₹ INR)</label>
+                            <input type="number" id="reg-deposit" value="5000" min="500" step="100">
+                        </div>
+                        <button type="submit" id="btn-register-submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                            Create & Open Bank Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 2: DASHBOARD ================= -->
+        <section id="section-dashboard" class="page-section">
+            <!-- Authoritative Liquid Balance Hero Card -->
+            <div class="balance-hero">
+                <div class="balance-hero-header">
+                    <div>
+                        <span class="label-caps">Total Authoritative Liquidity</span>
+                        <div class="balance-figure-row">
+                            <span class="balance-currency">₹</span>
+                            <span class="balance-num" id="dash-balance">0.00</span>
+                            <span class="balance-currency">INR</span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <label for="dash-account-selector">Active Account</label>
+                        <select id="dash-account-selector" onchange="onAccountChange(this.value)" style="min-width: 240px; font-family: var(--font-mono); font-size: 12px;"></select>
+                    </div>
+                </div>
+
+                <!-- Balance Secondary Metadata Bar -->
+                <div class="balance-sub-meta">
+                    <div><span class="label-caps">Customer ID:</span> <span class="mono" id="dash-cust-id">-</span></div>
+                    <div><span class="label-caps">Status:</span> <span class="badge badge-success" id="dash-acc-status">ACTIVE</span></div>
+                    <div><span class="label-caps">Consistency:</span> <span class="mono" style="color: var(--primary);">MongoDB Multi-Shard ACID</span></div>
+                    <div><span class="label-caps">Ledger State:</span> <span class="mono" style="color: var(--status-healthy-text);">Synchronized Dual-Entry</span></div>
+                </div>
+            </div>
+
+            <!-- Quick Action Grid -->
+            <div class="grid-4" style="margin-bottom: 1.5rem;">
+                <div class="quick-action-btn" onclick="showSection('transfers')">
+                    <div class="quick-action-icon">
+                        <span class="material-symbols-outlined">send_money</span>
+                    </div>
+                    <span class="quick-action-title">Transfer Funds</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Atomic Cross-Shard</span>
+                </div>
+
+                <div class="quick-action-btn" onclick="showSection('bills')">
+                    <div class="quick-action-icon">
+                        <span class="material-symbols-outlined">receipt_long</span>
+                    </div>
+                    <span class="quick-action-title">Pay Utility Bill</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Electricity, Water, Fiber</span>
+                </div>
+
+                <div class="quick-action-btn" onclick="showSection('beneficiaries')">
+                    <div class="quick-action-icon">
+                        <span class="material-symbols-outlined">group_add</span>
+                    </div>
+                    <span class="quick-action-title">Beneficiaries</span>
+                    <span style="font-size: 11px; color: var(--text-muted);"><span id="dash-beneficiary-count">0</span> Registered</span>
+                </div>
+
+                <div class="quick-action-btn" onclick="showSection('system-insights')">
+                    <div class="quick-action-icon">
+                        <span class="material-symbols-outlined">speed</span>
+                    </div>
+                    <span class="quick-action-title">System Insights</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Cluster & Rate Limiting</span>
+                </div>
+            </div>
+
+            <!-- Recent Financial Transactions Table -->
+            <div class="card">
+                <div class="section-header" style="margin-bottom: 1rem;">
+                    <div class="section-title-col">
+                        <h2 class="section-title">Recent Financial Activity</h2>
+                        <span class="section-desc">Latest ledger entries committed across MongoDB shards</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="showSection('history')">
+                        View Full History
+                        <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+                    </button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Reference</th>
+                                <th>Type</th>
+                                <th>Direction</th>
+                                <th>Counterparty Account</th>
+                                <th class="text-right">Amount (INR)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-recent-tx-tbody">
+                            <tr><td colspan="7" class="autocomplete-state-msg">No transactions yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 3: ACCOUNTS ================= -->
+        <section id="section-accounts" class="page-section">
+            <div class="section-header">
+                <div class="section-title-col">
+                    <h1 class="section-title">Account Portfolio</h1>
+                    <span class="section-desc">Authoritative accounts distributed across MongoDB native shards</span>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('modal-open-account')">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                    Open Additional Account
+                </button>
+            </div>
+
+            <div class="grid-2" id="accounts-grid">
+                <!-- Dynamically populated account cards -->
+            </div>
+        </section>
+
+        <!-- ================= SECTION 4: TRANSFERS ================= -->
+        <section id="section-transfers" class="page-section">
+            <div style="max-width: 680px; margin: 0 auto;">
+                <div class="card">
+                    <div class="section-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                        <div class="section-title-col">
+                            <div class="label-caps" style="color: var(--primary); display: flex; align-items: center; gap: 0.3rem;">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">verified_user</span>
+                                Dual-Entry Ledger Protection
+                            </div>
+                            <h1 class="section-title" style="margin-top: 0.25rem;">Transfer Funds</h1>
+                            <span class="section-desc">Atomic multi-document transaction with cryptographic idempotency</span>
+                        </div>
+                    </div>
+
+                    <form id="transfer-form" onsubmit="handleTransferSubmit(event)">
+                        <!-- Step 1: Source Account Selection -->
+                        <div class="form-group">
+                            <label for="transfer-source-account">01 · Source Account (Debit)</label>
+                            <select id="transfer-source-account" required onchange="onTransferSourceChange()"></select>
+                        </div>
+
+                        <!-- Step 2: Recipient Search & Autocomplete Destination -->
+                        <div class="form-group" style="position: relative;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                <label for="transfer-recipient-search-input" style="margin-bottom: 0;">02 · Recipient Destination</label>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openBeneficiarySelector()">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">person_search</span>
+                                    Browse Saved Beneficiaries
+                                </button>
+                            </div>
+
+                            <!-- Interactive Trie Recipient Autocomplete Input -->
+                            <div style="position: relative;">
+                                <span class="material-symbols-outlined search-icon-left" style="font-size: 18px;">search</span>
+                                <input type="text"
+                                       id="transfer-recipient-search-input"
+                                       class="search-input-box"
+                                       placeholder="Search recipient name or account number..."
+                                       autocomplete="off"
+                                       aria-autocomplete="list"
+                                       aria-expanded="false"
+                                       role="combobox"
+                                       oninput="onTransferRecipientInput(this.value)"
+                                       onkeydown="onTransferRecipientKeyDown(event)">
+                                <button type="button" id="transfer-recipient-clear" class="search-clear-btn" onclick="clearTransferRecipient()" title="Clear selection">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+                                </button>
+                                <!-- Autocomplete suggestion dropdown for transfer recipients -->
+                                <div id="transfer-recipient-dropdown" class="autocomplete-flyout" role="listbox"></div>
+                            </div>
+
+                            <!-- Verified Recipient Selected Card -->
+                            <div id="transfer-verified-recipient-card" class="verified-recipient-card" style="display: none;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div class="recipient-avatar-box" id="verified-recipient-avatar">--</div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 13px;" id="verified-recipient-name">Recipient</div>
+                                        <div class="mono" style="font-size: 12px; color: var(--text-secondary);" id="verified-recipient-acc">Account Number</div>
+                                    </div>
+                                </div>
+                                <span class="badge badge-success">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                                    Validated
+                                </span>
+                            </div>
+
+                            <!-- Hidden Actual Destination Account Input for Form Submission -->
+                            <input type="hidden" id="transfer-dest-account" required>
+                        </div>
+
+                        <!-- Step 3: Transfer Amount & Liquidity Preview -->
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <label for="transfer-amount" style="margin-bottom: 0;">03 · Transfer Amount (INR)</label>
+                                <span style="font-size: 11px; color: var(--status-healthy-text); font-weight: 500;">Zero Routing Fees</span>
+                            </div>
+                            <div class="amount-input-box">
+                                <span class="amount-currency-symbol">₹</span>
+                                <input type="number"
+                                       id="transfer-amount"
+                                       class="amount-input-field"
+                                       min="1.00"
+                                       step="0.01"
+                                       required
+                                       placeholder="0.00"
+                                       oninput="onTransferAmountInput(this.value)">
+                                <span class="amount-currency-tag">INR</span>
+                            </div>
+
+                            <!-- Preset Amount Pills -->
+                            <div class="amount-presets-row">
+                                <button type="button" class="preset-pill" onclick="applyTransferPreset(500)">+₹500</button>
+                                <button type="button" class="preset-pill" onclick="applyTransferPreset(1000)">+₹1,000</button>
+                                <button type="button" class="preset-pill" onclick="applyTransferPreset(5000)">+₹5,000</button>
+                                <button type="button" class="preset-pill" onclick="applyTransferPreset(10000)">+₹10,000</button>
+                                <button type="button" class="preset-pill preset-pill-max" onclick="applyTransferMax()">Transfer Max</button>
+                            </div>
+
+                            <!-- Real-time Liquidity Delta Indicator -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-low); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; margin-top: 0.5rem; font-size: 12px;">
+                                <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+                                    <span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary);">account_balance</span>
+                                    Estimated Post-Settlement Balance:
+                                </span>
+                                <span class="mono" style="font-weight: 600;" id="transfer-remaining-balance">₹ 0.00 INR</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Audit Memo & Reference -->
+                        <div class="form-group">
+                            <label for="transfer-description">04 · Audit Memo & Reference (Optional)</label>
+                            <input type="text" id="transfer-description" placeholder="Add internal transfer reference (optional)">
+                        </div>
+
+                        <!-- Step 5: Cryptographic Idempotency Safe-State -->
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                <label for="transfer-idempotency-key" style="margin-bottom: 0;">05 · Idempotency Envelope</label>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateIdempotencyKey()" title="Generate new UUID">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">autorenew</span>
+                                    Refresh Key
+                                </button>
+                            </div>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <input type="text" id="transfer-idempotency-key" readonly class="mono" style="background: var(--surface-low); font-size: 12px; color: var(--text-secondary);">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="copyIdempotencyKey()" title="Copy Key">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+                                </button>
+                            </div>
+                            <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                                Guarantees single-flight debit execution across network retries.
+                            </span>
+                        </div>
+
+                        <!-- Review & Submit -->
+                        <button type="submit" id="btn-transfer-submit" class="btn btn-primary" style="width: 100%; height: 42px; font-size: 14px; margin-top: 0.5rem;">
+                            Authorize & Execute Transfer
+                        </button>
+                    </form>
+
+                    <!-- Transfer Confirmation Result Receipt Card -->
+                    <div id="transfer-result-card" style="display: none; margin-top: 1.5rem; background: var(--status-healthy-bg); border: 1px solid var(--status-healthy-text); border-radius: var(--radius-sm); padding: 1.25rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--status-healthy-text); font-weight: 700; margin-bottom: 0.5rem;">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            Transfer Settled Successfully
+                        </div>
+                        <p id="transfer-result-message" style="font-size: 13px; color: var(--text-primary); margin-bottom: 0.75rem;"></p>
+                        <div class="mono" style="font-size: 12px; line-height: 1.6; background: rgba(255, 255, 255, 0.6); padding: 0.75rem; border-radius: var(--radius-xs);" id="transfer-result-details"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 5: BILL PAYMENTS ================= -->
+        <section id="section-bills" class="page-section">
+            <div class="grid-2">
+                <!-- Payment Submission Panel -->
+                <div class="card">
+                    <div class="section-header" style="margin-bottom: 1rem;">
+                        <div class="section-title-col">
+                            <h1 class="section-title">Pay Utility Bills</h1>
+                            <span class="section-desc">Automated utility deductions with double-entry ledger bookkeeping</span>
+                        </div>
+                    </div>
+
+                    <!-- Category Tabs -->
+                    <div class="segmented-control" style="width: 100%; margin-bottom: 1.25rem;">
+                        <button type="button" class="segmented-btn active" onclick="filterBillerCategory('ALL')">All</button>
+                        <button type="button" class="segmented-btn" onclick="filterBillerCategory('ELECTRICITY')">Electricity</button>
+                        <button type="button" class="segmented-btn" onclick="filterBillerCategory('WATER')">Water</button>
+                        <button type="button" class="segmented-btn" onclick="filterBillerCategory('INTERNET')">Internet</button>
+                        <button type="button" class="segmented-btn" onclick="filterBillerCategory('MOBILE')">Mobile</button>
+                    </div>
+
+                    <!-- Autocomplete Search for Billers -->
+                    <div class="form-group" style="position: relative;">
+                        <label for="biller-search-input">Search Utility Provider (Java Trie & Redis Cache)</label>
+                        <div style="position: relative;">
+                            <span class="material-symbols-outlined search-icon-left">search</span>
+                            <input type="text"
+                                   id="biller-search-input"
+                                   class="search-input-box"
+                                   placeholder="Type 'elec', 'water', 'fiber', 'mobile'..."
+                                   autocomplete="off"
+                                   oninput="onBillerSearchInput(this.value)">
+                            <div id="biller-autocomplete-dropdown" class="autocomplete-flyout" role="listbox"></div>
+                        </div>
+                    </div>
+
+                    <form id="bill-pay-form" onsubmit="handleBillPaySubmit(event)">
+                        <div class="form-group">
+                            <label for="bill-biller-select">Selected Biller</label>
+                            <select id="bill-biller-select" required onchange="onBillerSelected(this.value)"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bill-consumer-ref">Consumer Account / Meter Reference</label>
+                            <input type="text" id="bill-consumer-ref" required placeholder="Consumer or meter reference">
+                        </div>
+                        <div class="form-group">
+                            <label for="bill-source-account">Debiting Account</label>
+                            <select id="bill-source-account" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bill-amount">Bill Amount (₹ INR)</label>
+                            <input type="number" id="bill-amount" min="1.00" step="0.01" required placeholder="0.00">
+                        </div>
+                        <button type="submit" id="btn-bill-submit" class="btn btn-primary" style="width: 100%; height: 40px; margin-top: 0.5rem;">
+                            Confirm & Settle Utility Bill
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Past Bill Payments Record -->
+                <div class="card">
+                    <div class="section-header" style="margin-bottom: 1rem;">
+                        <div class="section-title-col">
+                            <h2 class="section-title">Utility Payment History</h2>
+                            <span class="section-desc">Settlement records recorded for this customer</span>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Biller</th>
+                                    <th>Consumer Ref</th>
+                                    <th class="text-right">Amount (INR)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bill-history-tbody">
+                                <tr><td colspan="5" class="autocomplete-state-msg">No bill payments recorded yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 6: BENEFICIARIES ================= -->
+        <section id="section-beneficiaries" class="page-section">
+            <div class="section-header">
+                <div class="section-title-col">
+                    <h1 class="section-title">Registered Beneficiaries</h1>
+                    <span class="section-desc">Verified internal transfer destinations</span>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('modal-add-beneficiary')">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">person_add</span>
+                    Add New Beneficiary
+                </button>
+            </div>
+
+            <div class="grid-3" id="beneficiaries-grid">
+                <!-- Dynamically populated beneficiary cards -->
+            </div>
+        </section>
+
+        <!-- ================= SECTION 7: TRANSACTION HISTORY ================= -->
+        <section id="section-history" class="page-section">
+            <div class="card">
+                <div class="section-header" style="margin-bottom: 1.25rem;">
+                    <div class="section-title-col">
+                        <h1 class="section-title">Transaction Ledger & Double-Entry Audit</h1>
+                        <span class="section-desc">Authoritative transaction history with distributed scatter-gather query support</span>
+                    </div>
+                    <div>
+                        <select id="history-type-filter" onchange="loadTransactionHistory(0)" style="width: 190px;">
+                            <option value="ALL">All Types</option>
+                            <option value="TRANSFER">Transfers Only</option>
+                            <option value="BILL_PAYMENT">Bill Payments Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Reference</th>
+                                <th>Type</th>
+                                <th>Direction</th>
+                                <th>Source Account</th>
+                                <th>Destination Account</th>
+                                <th class="text-right">Amount (INR)</th>
+                                <th>Status</th>
+                                <th style="text-align: center;">Ledger Audit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-tbody">
+                            <tr><td colspan="9" class="autocomplete-state-msg">No transactions yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Strip -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                    <div id="history-page-info" class="mono" style="font-size: 12px; color: var(--text-secondary);">Page 1</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="btn-hist-prev" class="btn btn-secondary btn-sm" onclick="prevHistoryPage()" disabled>
+                            <span class="material-symbols-outlined" style="font-size: 16px;">chevron_left</span>
+                            Previous
+                        </button>
+                        <button id="btn-hist-next" class="btn btn-secondary btn-sm" onclick="nextHistoryPage()">
+                            Next
+                            <span class="material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 8: NOTIFICATIONS ================= -->
+        <section id="section-notifications" class="page-section">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <div class="card">
+                    <div class="section-header" style="margin-bottom: 1.25rem;">
+                        <div class="section-title-col">
+                            <h1 class="section-title">In-App Notifications</h1>
+                            <span class="section-desc">Transactional Outbox & Apache Kafka event pipeline</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="markAllNotificationsAsRead()">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">done_all</span>
+                            Mark All as Read
+                        </button>
+                    </div>
+
+                    <div id="notifications-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <!-- Dynamically populated notifications -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 9: SYSTEM INSIGHTS ================= -->
+        <section id="section-system-insights" class="page-section">
+            <div class="section-header" style="margin-bottom: 1.25rem;">
+                <div class="section-title-col">
+                    <h1 class="section-title">System Insights & Telemetry</h1>
+                    <span class="section-desc">Distributed infrastructure behind account routing, transaction integrity, and caching</span>
+                </div>
+                <div class="live-pulse-badge">
+                    <span class="pulse-dot"></span>
+                    <span>Mongos Native Cluster Active</span>
+                </div>
+            </div>
+
+            <!-- Insights Sub-Tabs Strip -->
+            <div class="insight-tabs-strip">
+                <button class="insight-tab-pill active" onclick="switchInsightTab('ratelimit')">1. Rate Limiting</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('sharding')">2. MongoDB Sharding</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('consistenthash')">3. Consistent Hashing</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('idgen')">4. Unique IDs</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('shortener')">5. URL Shortener</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('autocomplete')">6. Trie Autocomplete</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('crawler')">7. Web Crawler</button>
+                <button class="insight-tab-pill" onclick="switchInsightTab('scaling')">8. Dataset Scaling</button>
+            </div>
+
+            <!-- 1. Token Bucket Rate Limiter Panel -->
+            <div id="insight-tab-ratelimit" class="insight-content active">
+                <div class="grid-4" style="margin-bottom: 1.25rem;">
+                    <div class="card">
+                        <span class="label-caps">Total Ingress Reqs</span>
+                        <div class="mono" style="font-size: 24px; font-weight: 600; margin-top: 0.25rem;" id="rl-total-reqs">0</div>
+                    </div>
+                    <div class="card">
+                        <span class="label-caps">Allowed (HTTP 200)</span>
+                        <div class="mono" style="font-size: 24px; font-weight: 600; color: var(--status-healthy-text); margin-top: 0.25rem;" id="rl-allowed-reqs">0</div>
+                    </div>
+                    <div class="card">
+                        <span class="label-caps">Rejected (HTTP 429)</span>
+                        <div class="mono" style="font-size: 24px; font-weight: 600; color: var(--status-error-text); margin-top: 0.25rem;" id="rl-rejected-reqs">0</div>
+                    </div>
+                    <div class="card">
+                        <span class="label-caps">Rejection Ratio</span>
+                        <div class="mono" style="font-size: 24px; font-weight: 600; margin-top: 0.25rem;" id="rl-rejection-pct">0.0%</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">Live Token-Bucket Concurrency Simulator</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Dispatches a rapid burst of 15 asynchronous HTTP requests to evaluate token exhaustion and atomic Redis Lua rate enforcement.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="simulateBurstTraffic(15)">Trigger 15 Burst Requests</button>
+                        <button class="btn btn-secondary btn-sm" onclick="resetRateLimiterMetrics()">Reset Telemetry</button>
+                    </div>
+                    <pre id="rl-burst-results" class="telemetry-output" style="max-height: 220px;">Click "Trigger 15 Burst Requests" to run test...</pre>
+                </div>
+            </div>
+
+            <!-- 2. MongoDB Sharding Panel -->
+            <div id="insight-tab-sharding" class="insight-content" style="display: none;">
+                <div class="card">
+                    <div class="section-header" style="margin-bottom: 1rem;">
+                        <div class="section-title-col">
+                            <h2 class="section-title" style="font-size: 16px;">MongoDB Native Sharded Cluster Status</h2>
+                            <span class="section-desc">Real-time status reported via mongos router across shard1, shard2, and shard3</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="checkShardingStatus()">Refresh Cluster Metadata</button>
+                    </div>
+                    <pre id="sharding-status-output" class="telemetry-output">Loading cluster status...</pre>
+                </div>
+            </div>
+
+            <!-- 3. Consistent Hashing Panel -->
+            <div id="insight-tab-consistenthash" class="insight-content" style="display: none;">
+                <div class="card">
+                    <div class="section-header" style="margin-bottom: 1rem;">
+                        <div class="section-title-col">
+                            <h2 class="section-title" style="font-size: 16px;">Consistent Hashing Ring (Virtual Nodes)</h2>
+                            <span class="section-desc">Application-level routing experiment with minimal key remapping property</span>
+                        </div>
+                    </div>
+                    <div class="grid-3" style="margin-bottom: 1.25rem;">
+                        <div class="card" style="background: var(--surface-low);">
+                            <span class="label-caps">Active Server Nodes</span>
+                            <div class="mono" style="font-size: 22px; font-weight: 600;" id="ch-node-count">3</div>
+                        </div>
+                        <div class="card" style="background: var(--surface-low);">
+                            <span class="label-caps">Virtual Nodes on Ring</span>
+                            <div class="mono" style="font-size: 22px; font-weight: 600;" id="ch-vnode-count">300</div>
+                        </div>
+                        <div class="card" style="background: var(--surface-low);">
+                            <span class="label-caps">Virtual Nodes / Server</span>
+                            <div class="mono" style="font-size: 22px; font-weight: 600;">100</div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 0.5rem;">Topology Mutation Experiment</h3>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Observe remapped key counts and percentages when adding or removing a node from 1,000 synthetic banking request keys.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="runConsistentHashExperiment('ADD', 'banking-srv-node-4')">+ Add Node 4</button>
+                        <button class="btn btn-danger btn-sm" onclick="runConsistentHashExperiment('REMOVE', 'banking-srv-node-4')">- Remove Node 4</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadConsistentHashDistribution()">Analyze Distribution</button>
+                    </div>
+                    <pre id="ch-experiment-output" class="telemetry-output">Click "+ Add Node 4" or "Analyze Distribution" to run experiment...</pre>
+                </div>
+            </div>
+
+            <!-- 4. Unique ID Generator Benchmark Panel -->
+            <div id="insight-tab-idgen" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">High-Throughput Unique ID Benchmark</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Benchmarking collision-free ID generation for high-concurrency ledger operations.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.25rem;">
+                        <button class="btn btn-primary btn-sm" onclick="runIdBenchmark(5000)">Run 5,000 IDs</button>
+                        <button class="btn btn-primary btn-sm" onclick="runIdBenchmark(20000)">Run 20,000 IDs</button>
+                        <button class="btn btn-primary btn-sm" onclick="runIdBenchmark(50000)">Run 50,000 IDs</button>
+                    </div>
+                    <pre id="idgen-output" class="telemetry-output">Click any benchmark button above to measure ID generation rate and verify collision resistance...</pre>
+                </div>
+            </div>
+
+            <!-- 5. URL Shortener Panel -->
+            <div id="insight-tab-shortener" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">URL Shortener & SSRF Route Guard</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Creates Base62 shortened links for permitted public synthetic biller information routes with Redis cache-aside.
+                    </p>
+                    <div class="form-group" style="max-width: 480px;">
+                        <label for="shortener-route-select">Public Synthetic Route</label>
+                        <select id="shortener-route-select">
+                            <option value="/synthetic/page1.html">/synthetic/page1.html (Central Hub)</option>
+                            <option value="/synthetic/page2.html">/synthetic/page2.html (Telecom)</option>
+                            <option value="/synthetic/page3.html">/synthetic/page3.html (Regional)</option>
+                            <option value="/synthetic/page4.html">/synthetic/page4.html (Green Energy)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="createShortUrl()" style="margin-bottom: 1.25rem;">Create Short Link</button>
+
+                    <div id="shortener-result" style="display: none; background: var(--surface-low); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;"></div>
+
+                    <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 0.5rem;">Shortener Telemetry & Redis Cache Hit Ratio</h3>
+                    <pre id="shortener-metrics" class="telemetry-output">Loading metrics...</pre>
+                </div>
+            </div>
+
+            <!-- 6. Trie Autocomplete Panel -->
+            <div id="insight-tab-autocomplete" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">Trie-Based Autocomplete + Redis Cache Evaluation</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Inspects Java Trie prefix tree search latencies, cache-hit vs cache-miss speedup in microseconds.
+                    </p>
+                    <div style="display: flex; gap: 0.5rem; max-width: 480px; margin-bottom: 1rem;">
+                        <input type="text" id="trie-eval-input" placeholder="Type 'elec', 'wat', 'met'..." value="elec">
+                        <button class="btn btn-primary btn-sm" onclick="evaluateTrieQuery()">Execute Search</button>
+                    </div>
+                    <pre id="trie-eval-output" class="telemetry-output">Click "Execute Search" to run query and check latency...</pre>
+                </div>
+            </div>
+
+            <!-- 7. Web Crawler Panel -->
+            <div id="insight-tab-crawler" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">Synthetic Web Crawler (Spring Boot + Redis Visited Set)</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Crawls local synthetic HTML pages, tracks visited URLs in Redis, and extracts synthetic billers.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <button class="btn btn-primary btn-sm" onclick="startCrawler()">Start Local Crawl</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshCrawlerStatus()">Refresh Metrics</button>
+                    </div>
+                    <pre id="crawler-metrics-output" class="telemetry-output" style="margin-bottom: 1.25rem;">Click "Start Local Crawl" to begin traversal...</pre>
+
+                    <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 0.5rem;">Extracted Synthetic Biller Records</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Biller Name</th>
+                                    <th>Category</th>
+                                    <th>Discovered Source URL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crawler-records-tbody">
+                                <tr><td colspan="4" class="autocomplete-state-msg">No records extracted yet. Run crawl first.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Dataset Scaling Panel -->
+            <div id="insight-tab-scaling" class="insight-content" style="display: none;">
+                <div class="card">
+                    <h2 class="section-title" style="font-size: 16px; margin-bottom: 0.4rem;">Dataset Scaling Experiment (MongoDB Shard Stress Testing)</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Generates batches of synthetic customers, accounts, and cross-account transfers to measure chunk distribution.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.25rem;">
+                        <button class="btn btn-primary btn-sm" onclick="generateScalingData(50, 5)">Generate 50 Customers + 250 Transfers</button>
+                        <button class="btn btn-primary btn-sm" onclick="generateScalingData(100, 10)">Generate 100 Customers + 1,000 Transfers</button>
+                    </div>
+                    <pre id="scaling-output" class="telemetry-output">Click any generation button above to scale the synthetic database...</pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Open Account Modal -->
+    <div id="modal-open-account" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Open Additional Bank Account</h2>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.2rem;">Create a secondary account under your customer profile.</p>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeModal('modal-open-account')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form onsubmit="handleOpenAccountSubmit(event)">
+                <div class="form-group">
+                    <label for="new-account-type">Account Type</label>
+                    <select id="new-account-type">
+                        <option value="SAVINGS">Savings Account</option>
+                        <option value="CHECKING">Checking Account</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="new-account-deposit">Initial Deposit (₹ INR)</label>
+                    <input type="number" id="new-account-deposit" value="1000" min="0" step="100">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Confirm & Open Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Beneficiary Modal -->
+    <div id="modal-add-beneficiary" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Add Transfer Beneficiary</h2>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.2rem;">Destination account is validated against active bank records.</p>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeModal('modal-add-beneficiary')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form onsubmit="handleAddBeneficiarySubmit(event)">
+                <div class="form-group">
+                    <label for="ben-name">Beneficiary Full Name</label>
+                    <input type="text" id="ben-name" required placeholder="Full legal name">
+                </div>
+                <div class="form-group">
+                    <label for="ben-account">Internal Account Number</label>
+                    <input type="text" id="ben-account" required placeholder="ACC-XXXX-XXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label for="ben-bank">Bank Name</label>
+                    <input type="text" id="ben-bank" value="Apex Reserve Bank">
+                </div>
+                <div class="form-group">
+                    <label for="ben-email">Notification Email (Optional)</label>
+                    <input type="email" id="ben-email" placeholder="beneficiary@example.com">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Verify & Save Beneficiary</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Select Beneficiary Modal for Transfer -->
+    <div id="modal-select-beneficiary" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Select a Beneficiary</h2>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.2rem;">Choose from your saved destination accounts</p>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeModal('modal-select-beneficiary')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="transfer-beneficiary-picker-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 320px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Double-Entry Ledger Audit Modal -->
+    <div id="modal-ledger-audit" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Double-Entry Ledger Audit Proof</h2>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.2rem;">
+                        Mathematical Proof: <code style="color: var(--primary); font-weight: 600;">Sum(Debits) == Sum(Credits)</code>
+                    </p>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeModal('modal-ledger-audit')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <pre id="ledger-audit-details" class="telemetry-output" style="max-height: 360px;">Loading audit...</pre>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Frontend Vanilla JavaScript Logic -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

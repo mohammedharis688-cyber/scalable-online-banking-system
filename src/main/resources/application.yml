@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: scalable-online-banking-system
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27117/banking_db}
+      auto-index-creation: false
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: banking-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+jwt:
+  secret: ScalableOnlineBankingSecretKeyForUCS3513LaboratorySecureSignatures1234567890!
+  expiration: 86400000
+
+banking:
+  ratelimit:
+    login:
+      capacity: 10
+      refill-rate: 1.0
+    transfer:
+      capacity: 20
+      refill-rate: 2.0
+    api:
+      capacity: 100
+      refill-rate: 20.0
+  crawler:
+    max-pages: 20
+    delay-ms: 100
