@@ -15,7 +15,7 @@
 ## Current Checkpoint
 - **Current Phase**: Phase 9 — Final Documentation, Testing & Handover (Verified & Live Validated)
 - **Active Branch**: `member-1`
-- **Last Verified Commit**: `71c9d55` ("chore: update PROJECT_STATE.md with latest verified commit")
+- **Last Verified Commit**: `e1840ab` ("fix: pre-shard bill payments collection and refine security config for framework error routing and public base endpoints")
 - **Last Completed Task**: End-to-end live runtime verification against active MongoDB native sharded cluster (3 shards), Redis 7, Kafka 3.8, and Spring Boot 3.4.3. Verified: Auth (JWT), Account balance inquiry, Fund transfers with idempotency key, Insufficient balance rejection, Bill payments, Kafka outbox notifications, Trie autocomplete with Redis cache-aside, URL shortener with MD5 collision resolution and HTTP 302 redirect, Consistent hash ring with 300 virtual nodes, and Local synthetic web crawler.
 - **Current Task**: Commit latest sharding and security configuration improvements and push to GitHub origin
 - **Next Task**: Remote push to GitHub origin (`git push origin member-1`)
