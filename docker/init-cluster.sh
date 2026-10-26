@@ -103,6 +103,10 @@ sh.shardCollection("banking_db.transactions", { "transactionId": "hashed" });
 // Shard ledgers by hashed transactionId to collocate ledger entries with transactions
 sh.shardCollection("banking_db.ledgers", { "transactionId": "hashed" });
 
+// Shard bill_payments by hashed paymentReference for write scalability
+db.getSiblingDB("banking_db").bill_payments.createIndex({ "paymentReference": "hashed" });
+sh.shardCollection("banking_db.bill_payments", { "paymentReference": "hashed" });
+
 print("=== MongoDB Sharded Cluster Configuration Complete! ===");
 printjson(sh.status());
 '

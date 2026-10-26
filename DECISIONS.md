@@ -142,3 +142,14 @@
   - Maintained hashed shard keys on primary identifiers (`customerId`, `accountNumber`, `transactionId`, `ledgerId`).
   - Adjusted secondary fields (such as `paymentReference`, `transactionReference`, `email`) to standard indexed status (`@Indexed`), handling unique reference invariants at the application service and idempotency key layer.
 - **Consequences**: Flawless collection sharding and shard-key initialization on native MongoDB clusters without index creation collisions.
+
+---
+
+### ADR-011: Pre-Sharding Distributed Collections for Multi-Document Transactions
+- **Status**: ACCEPTED
+- **Context**: In native MongoDB sharded clusters, multi-document transactions cannot implicitly create collections dynamically. Attempting to write to an uncreated collection during an active distributed transaction aborts with MongoDB error 13388 (`StaleConfig`: cluster data placement change / sharding status not known).
+- **Decision**:
+  - All transactional collections (`customers`, `accounts`, `transactions`, `ledgers`, and `bill_payments`) are explicitly pre-created with their corresponding hashed shard key index and sharded during cluster bootstrap in `docker/init-cluster.sh`.
+  - Configured `SecurityConfig` to permit `/error` and exact base URL paths so framework errors and public design endpoints are never masked by 401 Unauthorized exceptions.
+- **Consequences**: Zero transaction aborts during distributed fund transfers and bill payments; transparent routing across all three shards.
+

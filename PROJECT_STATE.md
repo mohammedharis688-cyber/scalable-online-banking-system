@@ -13,13 +13,13 @@
 ---
 
 ## Current Checkpoint
-- **Current Phase**: Phase 9 — Final Documentation, Testing & Handover
+- **Current Phase**: Phase 9 — Final Documentation, Testing & Handover (Verified & Live Validated)
 - **Active Branch**: `member-1`
-- **Last Verified Commit**: `eae5abe` ("feat: optimize sharded balance updates, add jmeter benchmark dashboards, and update architectural decisions")
-- **Last Completed Task**: Automated test verification with JUnit 5 on JDK 26 (15 tests run, 0 failures, 100% pass) and JMeter benchmark execution (Low, Medium, High dashboards generated in `reports/performance/`)
-- **Current Task**: Complete handover report and milestone sign-off
-- **Next Task**: Remote push to GitHub origin (`git push -u origin member-1`) when user credentials are provided
-- **Last Checkpoint Timestamp**: 2026-10-21T15:35:00+05:30
+- **Last Verified Commit**: `71c9d55` ("chore: update PROJECT_STATE.md with latest verified commit")
+- **Last Completed Task**: End-to-end live runtime verification against active MongoDB native sharded cluster (3 shards), Redis 7, Kafka 3.8, and Spring Boot 3.4.3. Verified: Auth (JWT), Account balance inquiry, Fund transfers with idempotency key, Insufficient balance rejection, Bill payments, Kafka outbox notifications, Trie autocomplete with Redis cache-aside, URL shortener with MD5 collision resolution and HTTP 302 redirect, Consistent hash ring with 300 virtual nodes, and Local synthetic web crawler.
+- **Current Task**: Commit latest sharding and security configuration improvements and push to GitHub origin
+- **Next Task**: Remote push to GitHub origin (`git push origin member-1`)
+- **Last Checkpoint Timestamp**: 2026-10-26T12:45:00+05:30
 
 ---
 
@@ -57,28 +57,31 @@
 ---
 
 ## Known Errors and Unresolved Issues
-1. None in application code or tests. 15 of 15 tests pass cleanly.
-2. The remote GitHub repository has not yet been initialized on GitHub servers under `mohammedharis688-cyber`. Since git push requires user credentials or an active token, the local repository contains the complete commit history on `member-1`, ready for a one-line push (`git push -u origin member-1`).
+1. None in application code, tests, cluster, or messaging pipeline. All 15 tests pass cleanly with 0 failures.
+2. All core banking workflows (Login, Accounts, Transfers, Idempotency, Insufficient balance rejection, Bill payments, Kafka notifications) and system design modules (Trie autocomplete + cache-aside, ID generator benchmark, URL shortener redirect, Consistent hashing 300 vnodes, Web crawler) are verified against the live cluster.
+3. Remote push dry run succeeded cleanly against origin/member-1.
 
 ---
 
 ## Latest Verified Results
 - **JUnit 5 Test Suite**: 15 tests executed, 0 failures, 0 errors, 0 skipped.
 - **Java Compilation**: 69 source files compiled with 0 warnings or errors.
-- **Performance Evaluation**: Apache JMeter HTML dashboards generated for 10, 25, and 50 concurrent user workloads with 0% 5xx errors.
-- **MongoDB Sharding**: Shard-key targeted balance update operations implemented in `AccountService`.
+- **Performance Evaluation**: Apache JMeter HTML dashboards generated for 10, 25, and 50 concurrent user workloads with 0% 5xx errors in `reports/performance/`.
+- **MongoDB Native Sharding**: 3 data shards (`rs-shard1`, `rs-shard2`, `rs-shard3`), 1 config replica set (`rs-cfg`), `mongos` router on port 27117. Verified sharded collections: `customers`, `accounts`, `transactions`, `ledgers`, and `bill_payments`.
+- **Redis Cache & Rate Limiting**: Atomic Lua token-bucket rate limiter (HTTP 429), Trie autocomplete cache-aside, and URL shortener cache-aside verified live.
+- **Apache Kafka Pipeline**: KRaft cluster with topics `bank.notifications` and `bank.audit`, transactional outbox publisher and Kafka consumer verified live.
 - **Branch State**: Active branch is `member-1`. No commits made to `main`.
 
 ---
 
 ## Recent Changes
-- Updated `AccountService`, `TransferService`, and `BillPaymentService` with shard-key targeted balance updates via `mongoTemplate.updateFirst`.
-- Refined sharded entity indexes to avoid non-shard-key unique index constraints in native MongoDB sharding.
-- Added `/api/shorten` and `/api/consistent-hash` aliases and flexible request mappings.
-- Generated complete JMeter HTML benchmark report dashboards and raw JTL logs in `reports/performance/`.
-- Updated ADR records in `DECISIONS.md` (ADR-009, ADR-010).
+- Pre-created and sharded `bill_payments` collection with hashed `paymentReference` shard key in `docker/init-cluster.sh` and live MongoDB cluster to prevent `StaleConfig` errors during distributed transactions.
+- Updated `SecurityConfig` to permit `/error` and exact base URL paths (`/api/shorten`, `/api/shortener`, `/api/autocomplete`, `/api/crawler`, `/api/consistent-hash`) ensuring clean framework error propagation.
+- Added ADR-011 in `DECISIONS.md` documenting pre-sharding requirements for distributed multi-document transactions.
+- Updated `PROJECT_STATE.md` and `NEXT_STEPS.md`.
 
 ---
 
 ## Exact Next Action
-Commit all updates to branch `member-1` and deliver the comprehensive handover report to the user.
+Commit all verified updates to branch `member-1`, push to `origin/member-1`, and present the comprehensive verification report to the user.
+

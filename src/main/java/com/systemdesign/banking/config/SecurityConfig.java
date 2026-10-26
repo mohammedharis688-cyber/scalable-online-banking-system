@@ -56,18 +56,24 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/synthetic/**",
-                                "/favicon.ico"
+                                "/favicon.ico",
+                                "/error"
                         ).permitAll()
                         // Public Authentication APIs
                         .requestMatchers("/api/auth/**").permitAll()
                         // Public System Design Evaluation & Insights Endpoints
                         .requestMatchers(
                                 "/api/system/**",
+                                "/api/shortener",
                                 "/api/shortener/**",
+                                "/api/shorten",
                                 "/api/shorten/**",
                                 "/s/**",
+                                "/api/autocomplete",
                                 "/api/autocomplete/**",
+                                "/api/crawler",
                                 "/api/crawler/**",
+                                "/api/consistent-hash",
                                 "/api/consistent-hash/**",
                                 "/actuator/**"
                         ).permitAll()
