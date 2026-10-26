@@ -107,6 +107,14 @@ sh.shardCollection("banking_db.ledgers", { "transactionId": "hashed" });
 db.getSiblingDB("banking_db").bill_payments.createIndex({ "paymentReference": "hashed" });
 sh.shardCollection("banking_db.bill_payments", { "paymentReference": "hashed" });
 
+// Pre-create outbox_events and short_urls so distributed transactions never attempt implicit creation
+db.getSiblingDB("banking_db").createCollection("outbox_events");
+db.getSiblingDB("banking_db").outbox_events.createIndex({ "eventId": 1 }, { unique: true });
+db.getSiblingDB("banking_db").outbox_events.createIndex({ "status": 1 });
+
+db.getSiblingDB("banking_db").createCollection("short_urls");
+db.getSiblingDB("banking_db").short_urls.createIndex({ "shortCode": 1 }, { unique: true });
+
 print("=== MongoDB Sharded Cluster Configuration Complete! ===");
 printjson(sh.status());
 '

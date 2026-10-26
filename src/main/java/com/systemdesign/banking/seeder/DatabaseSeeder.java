@@ -19,6 +19,7 @@ import com.systemdesign.banking.transaction.TransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final UniqueIdGenerator idGenerator;
     private final AutocompleteService autocompleteService;
+    private final MongoTemplate mongoTemplate;
 
     public DatabaseSeeder(
             CustomerRepository customerRepository,
@@ -52,7 +54,8 @@ public class DatabaseSeeder implements CommandLineRunner {
             NotificationRepository notificationRepository,
             PasswordEncoder passwordEncoder,
             UniqueIdGenerator idGenerator,
-            AutocompleteService autocompleteService) {
+            AutocompleteService autocompleteService,
+            MongoTemplate mongoTemplate) {
         this.customerRepository = customerRepository;
         this.accountRepository = accountRepository;
         this.beneficiaryRepository = beneficiaryRepository;
@@ -63,10 +66,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.idGenerator = idGenerator;
         this.autocompleteService = autocompleteService;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Override
     public void run(String... args) {
+        ensureCollectionsExist();
+
         log.info("Checking database initialization status...");
         if (customerRepository.existsByEmail("john.doe@example.com")) {
             log.info("Database is already seeded. Skipping duplicate seeding.");
@@ -185,5 +191,19 @@ public class DatabaseSeeder implements CommandLineRunner {
         autocompleteService.addTerm("Bob Jones", "BENEFICIARY", "ACC-1001-10000003", 90);
 
         log.info("Database seeding completed successfully! Demo accounts are ready.");
+    }
+
+    private void ensureCollectionsExist() {
+        String[] requiredCollections = {
+                "customers", "accounts", "beneficiaries", "billers",
+                "transactions", "ledgers", "bill_payments", "notifications",
+                "outbox_events", "short_urls"
+        };
+        for (String coll : requiredCollections) {
+            if (!mongoTemplate.collectionExists(coll)) {
+                mongoTemplate.createCollection(coll);
+                log.info("Pre-created required MongoDB collection: {}", coll);
+            }
+        }
     }
 }

@@ -981,7 +981,7 @@ async function handleTransferSubmit(e) {
         }
 
         if (!res.ok) {
-            showToast(data.message || 'Transfer failed', 'error');
+            showToast(data.message || data.error || 'Transfer failed', 'error');
             return;
         }
 
@@ -1276,7 +1276,7 @@ async function handleBillPaySubmit(e) {
         });
         const data = await res.json();
         if (!res.ok) {
-            showToast(data.message || 'Payment failed', 'error');
+            showToast(data.message || data.error || 'Payment failed', 'error');
             return;
         }
 
