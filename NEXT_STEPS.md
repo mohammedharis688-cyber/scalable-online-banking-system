@@ -28,3 +28,4 @@
 | T-023 | Apache JMeter Performance Test Plans & Experiments (Workloads: 10, 25, 50 users) | T-019 | VERIFIED | Completed | JMX plan, shell and bat execution scripts |
 | T-024 | Scalability & Failure Experiments (Shard addition, consistent hashing, component failure) | T-006, T-023 | VERIFIED | Completed | Experiments A through F documented with metrics and analysis |
 | T-025 | Comprehensive Documentation & Handover | T-001 - T-024 | VERIFIED | Completed | Master README.md, 8 docs in `docs/`, and final handover report |
+| T-026 | Redesign Banking Frontend (Northline) & Integrate Functional Autocomplete | T-016, T-019 | VERIFIED | Completed | Northline CSS, global search Trie integration, recipient search, browser verified |

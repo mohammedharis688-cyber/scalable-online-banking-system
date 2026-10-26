@@ -2,6 +2,7 @@ package com.systemdesign.banking.beneficiary;
 
 import com.systemdesign.banking.account.Account;
 import com.systemdesign.banking.account.AccountRepository;
+import com.systemdesign.banking.systemdesign.autocomplete.AutocompleteService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,10 +12,14 @@ public class BeneficiaryService {
 
     private final BeneficiaryRepository beneficiaryRepository;
     private final AccountRepository accountRepository;
+    private final AutocompleteService autocompleteService;
 
-    public BeneficiaryService(BeneficiaryRepository beneficiaryRepository, AccountRepository accountRepository) {
+    public BeneficiaryService(BeneficiaryRepository beneficiaryRepository,
+                              AccountRepository accountRepository,
+                              AutocompleteService autocompleteService) {
         this.beneficiaryRepository = beneficiaryRepository;
         this.accountRepository = accountRepository;
+        this.autocompleteService = autocompleteService;
     }
 
     public Beneficiary addBeneficiary(String customerId, String name, String accountNumber, String bankName, String email) {
@@ -43,7 +48,12 @@ public class BeneficiaryService {
                 bankName != null ? bankName : "Apex Reserve Bank",
                 email
         );
-        return beneficiaryRepository.save(beneficiary);
+        Beneficiary saved = beneficiaryRepository.save(beneficiary);
+        if (autocompleteService != null) {
+            autocompleteService.addTerm(saved.getName(), "BENEFICIARY", saved.getAccountNumber(), 90);
+            autocompleteService.addTerm(saved.getAccountNumber(), "BENEFICIARY", saved.getAccountNumber(), 85);
+        }
+        return saved;
     }
 
     public List<Beneficiary> getCustomerBeneficiaries(String customerId) {

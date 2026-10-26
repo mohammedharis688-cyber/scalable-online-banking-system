@@ -1,5 +1,7 @@
 package com.systemdesign.banking.systemdesign.autocomplete;
 
+import com.systemdesign.banking.beneficiary.Beneficiary;
+import com.systemdesign.banking.beneficiary.BeneficiaryRepository;
 import com.systemdesign.banking.billpayment.Biller;
 import com.systemdesign.banking.billpayment.BillerRepository;
 import com.systemdesign.banking.systemdesign.cache.RedisCacheService;
@@ -19,23 +21,33 @@ public class AutocompleteService {
 
     private final Trie trie;
     private final BillerRepository billerRepository;
+    private final BeneficiaryRepository beneficiaryRepository;
     private final RedisCacheService cacheService;
 
     private final AtomicLong totalQueries = new AtomicLong(0);
 
-    public AutocompleteService(Trie trie, BillerRepository billerRepository, RedisCacheService cacheService) {
+    public AutocompleteService(Trie trie,
+                               BillerRepository billerRepository,
+                               BeneficiaryRepository beneficiaryRepository,
+                               RedisCacheService cacheService) {
         this.trie = trie;
         this.billerRepository = billerRepository;
+        this.beneficiaryRepository = beneficiaryRepository;
         this.cacheService = cacheService;
     }
 
     @PostConstruct
     public void initTrieFromDatabase() {
-        log.info("Initializing Trie Autocomplete terms from MongoDB Biller repository...");
+        log.info("Initializing Trie Autocomplete terms from MongoDB Biller and Beneficiary repositories...");
         List<Biller> billers = billerRepository.findAll();
         for (Biller biller : billers) {
             trie.insert(biller.getName(), biller.getCategory(), biller.getBillerCode(), 100);
             trie.insert(biller.getBillerCode(), biller.getCategory(), biller.getBillerCode(), 90);
+        }
+        List<Beneficiary> beneficiaries = beneficiaryRepository.findAll();
+        for (Beneficiary b : beneficiaries) {
+            trie.insert(b.getName(), "BENEFICIARY", b.getAccountNumber(), 90);
+            trie.insert(b.getAccountNumber(), "BENEFICIARY", b.getAccountNumber(), 85);
         }
     }
 

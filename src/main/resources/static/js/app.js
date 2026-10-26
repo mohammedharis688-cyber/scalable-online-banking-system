@@ -1,12 +1,12 @@
 /**
- * Scalable Online Banking System — Frontend Application Logic
- * UCS3513 System Design Laboratory
- * Plain Vanilla JavaScript, Browser Fetch API, Direct Spring Boot Static Serving
+ * Northline Banking Design System — Frontend Application Architecture
+ * Scalable Online Banking System — UCS3513 System Design Laboratory
+ * Pure Vanilla JavaScript, Native Browser Fetch API
  */
 
 const API_BASE = '/api';
 
-// Application State
+// Central Application State
 let state = {
     token: localStorage.getItem('bank_token') || null,
     user: null,
@@ -18,9 +18,31 @@ let state = {
     totalHistoryPages: 1
 };
 
+// Global Autocomplete State Tracking
+const autocompleteState = {
+    global: {
+        activeQueryId: 0,
+        selectedIndex: -1,
+        items: []
+    },
+    transfer: {
+        activeQueryId: 0,
+        selectedIndex: -1,
+        items: []
+    },
+    biller: {
+        activeQueryId: 0,
+        selectedIndex: -1,
+        items: []
+    }
+};
+
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
     regenerateIdempotencyKey();
+    setupGlobalShortcuts();
+    setupClickOutsideListeners();
+
     if (state.token) {
         verifySession();
     } else {
@@ -28,16 +50,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function setupGlobalShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Pressing '/' focuses global search when not typing in an input
+        if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+            e.preventDefault();
+            const searchInput = document.getElementById('global-search-input');
+            if (searchInput && state.token) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+}
+
+function setupClickOutsideListeners() {
+    document.addEventListener('click', (e) => {
+        // Global search flyout click outside
+        const globalSearchWrapper = document.getElementById('global-search-container');
+        const globalDropdown = document.getElementById('global-search-dropdown');
+        if (globalSearchWrapper && !globalSearchWrapper.contains(e.target)) {
+            if (globalDropdown) globalDropdown.classList.remove('active');
+        }
+
+        // Transfer recipient flyout click outside
+        const transferInput = document.getElementById('transfer-recipient-search-input');
+        const transferDropdown = document.getElementById('transfer-recipient-dropdown');
+        if (transferDropdown && transferInput && !transferInput.contains(e.target) && !transferDropdown.contains(e.target)) {
+            transferDropdown.classList.remove('active');
+        }
+
+        // Biller dropdown click outside
+        const billerInput = document.getElementById('biller-search-input');
+        const billerDropdown = document.getElementById('biller-autocomplete-dropdown');
+        if (billerDropdown && billerInput && !billerInput.contains(e.target) && !billerDropdown.contains(e.target)) {
+            billerDropdown.classList.remove('active');
+        }
+    });
+}
+
 // ================= NOTIFICATION TOASTS =================
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    
+    let icon = 'info';
+    if (type === 'success') icon = 'check_circle';
+    if (type === 'error') icon = 'error';
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined" style="font-size: 18px; color: ${type === 'success' ? 'var(--status-healthy-text)' : type === 'error' ? 'var(--status-error-text)' : 'var(--primary)'};">${icon}</span>
+        <span>${escapeHtml(message)}</span>
+    `;
     container.appendChild(toast);
     setTimeout(() => {
         toast.remove();
-    }, 4000);
+    }, 4500);
 }
 
 // ================= MODAL CONTROLS =================
@@ -54,13 +124,13 @@ function closeModal(id) {
 // ================= NAVIGATION =================
 function showSection(sectionId) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-tab-link').forEach(b => b.classList.remove('active'));
 
     const sec = document.getElementById(`section-${sectionId}`);
     if (sec) sec.classList.add('active');
 
-    // Highlight nav button
-    document.querySelectorAll('.nav-item').forEach(b => {
+    // Highlight nav link
+    document.querySelectorAll('.nav-tab-link').forEach(b => {
         if (b.getAttribute('onclick')?.includes(sectionId)) {
             b.classList.add('active');
         }
@@ -79,13 +149,28 @@ function showSection(sectionId) {
 
 function updateNavState() {
     const isAuth = !!state.token;
-    document.getElementById('nav-authenticated-menu').style.display = isAuth ? 'flex' : 'none';
-    document.getElementById('notif-btn').style.display = isAuth ? 'block' : 'none';
-    document.getElementById('logout-btn').style.display = isAuth ? 'block' : 'none';
-    document.getElementById('user-display').style.display = isAuth ? 'block' : 'none';
+    const navMenu = document.getElementById('nav-authenticated-menu');
+    const searchContainer = document.getElementById('global-search-container');
+    const sessionPulse = document.getElementById('session-pulse');
+    const notifBtn = document.getElementById('notif-btn');
+    const userDisplay = document.getElementById('user-display');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (navMenu) navMenu.style.display = isAuth ? 'block' : 'none';
+    if (searchContainer) searchContainer.style.display = isAuth ? 'block' : 'none';
+    if (sessionPulse) sessionPulse.style.display = isAuth ? 'inline-flex' : 'none';
+    if (notifBtn) notifBtn.style.display = isAuth ? 'inline-flex' : 'none';
+    if (logoutBtn) logoutBtn.style.display = isAuth ? 'inline-flex' : 'none';
+    if (userDisplay) userDisplay.style.display = isAuth ? 'inline-flex' : 'none';
 
     if (isAuth && state.user) {
-        document.getElementById('user-display').innerHTML = `👤 <strong>${state.user.fullName}</strong>`;
+        const userNameEl = document.getElementById('user-name');
+        const userAvatarEl = document.getElementById('user-avatar');
+        if (userNameEl) userNameEl.textContent = state.user.fullName;
+        if (userAvatarEl) {
+            const initials = state.user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            userAvatarEl.textContent = initials || 'CU';
+        }
     }
 }
 
@@ -146,7 +231,7 @@ async function handleLogin(e) {
         showToast('Network error during login: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Sign In to Account';
+        btn.textContent = 'Sign In to Portal';
     }
 }
 
@@ -184,14 +269,14 @@ async function handleRegister(e) {
         };
         localStorage.setItem('bank_token', data.token);
 
-        showToast(`Account created successfully! Account Number: ${data.primaryAccountNumber}`, 'success');
+        showToast(`Account created! Default Account: ${data.primaryAccountNumber}`, 'success');
         updateNavState();
         showSection('dashboard');
     } catch (err) {
         showToast('Registration error: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Create Account & Open Default Bank Account';
+        btn.textContent = 'Create & Open Bank Account';
     }
 }
 
@@ -217,10 +302,12 @@ function logout() {
     state.token = null;
     state.user = null;
     state.accounts = [];
+    state.currentAccount = null;
+    state.beneficiaries = [];
     localStorage.removeItem('bank_token');
     updateNavState();
     showSection('auth');
-    showToast('Logged out successfully', 'info');
+    showToast('Session ended safely', 'info');
 }
 
 // ================= DASHBOARD & ACCOUNTS =================
@@ -263,7 +350,7 @@ function renderAccounts() {
         state.accounts.forEach(acc => {
             const opt = document.createElement('option');
             opt.value = acc.accountNumber;
-            opt.textContent = `${acc.accountType} (${acc.accountNumber}) — ₹${parseFloat(acc.balance).toLocaleString('en-IN')}`;
+            opt.textContent = `${acc.accountType} (${acc.accountNumber}) — ₹${parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             if (state.currentAccount && acc.accountNumber === state.currentAccount.accountNumber) {
                 opt.selected = true;
             }
@@ -278,20 +365,29 @@ function renderAccounts() {
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
                     <div>
-                        <span class="badge badge-active">${acc.accountType}</span>
-                        <h2 style="margin-top: 0.5rem; font-family: monospace;">${acc.accountNumber}</h2>
+                        <span class="badge badge-success">${escapeHtml(acc.accountType)}</span>
+                        <h2 class="mono" style="font-size: 16px; font-weight: 600; margin-top: 0.35rem;">${escapeHtml(acc.accountNumber)}</h2>
                     </div>
-                    <span class="badge ${acc.status === 'ACTIVE' ? 'badge-credit' : 'badge-debit'}">${acc.status}</span>
+                    <span class="badge ${acc.status === 'ACTIVE' ? 'badge-success' : 'badge-error'}">${escapeHtml(acc.status)}</span>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Authoritative Balance</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #ffffff;">₹ ${parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    <span class="label-caps" style="display: block; margin-bottom: 0.2rem;">Authoritative Shard Balance</span>
+                    <div class="mono" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">
+                        ₹ ${parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        <span style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">INR</span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="checkAuthoritativeBalance('${acc.accountNumber}')">Verify Live Shard Balance</button>
-                    <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="quickTransferFrom('${acc.accountNumber}')">Transfer From</button>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="checkAuthoritativeBalance('${acc.accountNumber}')">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">sync</span>
+                        Verify Live Shard
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="quickTransferFrom('${acc.accountNumber}')">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">send_money</span>
+                        Transfer From
+                    </button>
                 </div>
             `;
             grid.appendChild(card);
@@ -306,9 +402,12 @@ function onAccountChange(accountNumber) {
 
 function updateDashboardBalance() {
     if (!state.currentAccount) return;
-    document.getElementById('dash-balance').textContent = parseFloat(state.currentAccount.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    document.getElementById('dash-cust-id').textContent = state.currentAccount.customerId;
-    document.getElementById('dash-acc-status').textContent = state.currentAccount.status;
+    const dashBal = document.getElementById('dash-balance');
+    const custId = document.getElementById('dash-cust-id');
+    const accStatus = document.getElementById('dash-acc-status');
+    if (dashBal) dashBal.textContent = parseFloat(state.currentAccount.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    if (custId) custId.textContent = state.currentAccount.customerId;
+    if (accStatus) accStatus.textContent = state.currentAccount.status;
 }
 
 async function checkAuthoritativeBalance(accountNumber) {
@@ -347,23 +446,484 @@ async function handleOpenAccountSubmit(e) {
     }
 }
 
-// ================= TRANSFERS =================
+// ================= GLOBAL SEARCH AUTOCOMPLETE =================
+let globalSearchDebounce = null;
+
+function onGlobalSearchInput(val) {
+    const clearBtn = document.getElementById('global-search-clear');
+    const hint = document.getElementById('global-search-hint');
+    const dropdown = document.getElementById('global-search-dropdown');
+
+    if (val && val.length > 0) {
+        if (clearBtn) clearBtn.style.display = 'block';
+        if (hint) hint.style.display = 'none';
+    } else {
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (hint) hint.style.display = 'block';
+        if (dropdown) dropdown.classList.remove('active');
+        return;
+    }
+
+    const trimmed = val.trim();
+    if (trimmed.length < 1) {
+        if (dropdown) dropdown.classList.remove('active');
+        return;
+    }
+
+    clearTimeout(globalSearchDebounce);
+    const queryId = ++autocompleteState.global.activeQueryId;
+
+    globalSearchDebounce = setTimeout(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/autocomplete?prefix=${encodeURIComponent(trimmed)}&limit=12`);
+            if (queryId !== autocompleteState.global.activeQueryId) return; // Discard stale request
+
+            const data = await res.json();
+            const suggestions = data.suggestions || [];
+            
+            // Augment with matching navigation items
+            const navMatches = getNavigationSuggestions(trimmed);
+
+            renderGlobalSearchDropdown(suggestions, navMatches, trimmed);
+        } catch (err) {
+            console.error('Global search autocomplete error', err);
+        }
+    }, 250);
+}
+
+function clearGlobalSearch() {
+    const input = document.getElementById('global-search-input');
+    const clearBtn = document.getElementById('global-search-clear');
+    const hint = document.getElementById('global-search-hint');
+    const dropdown = document.getElementById('global-search-dropdown');
+
+    if (input) input.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (hint) hint.style.display = 'block';
+    if (dropdown) dropdown.classList.remove('active');
+}
+
+function getNavigationSuggestions(query) {
+    const navItems = [
+        { term: 'Fund Transfers', category: 'NAV', referenceCode: 'transfers', desc: 'Atomic cross-shard fund transfers' },
+        { term: 'Utility Bill Payments', category: 'NAV', referenceCode: 'bills', desc: 'Settle electricity, water, internet bills' },
+        { term: 'Account Management', category: 'NAV', referenceCode: 'accounts', desc: 'View accounts, balances, open new account' },
+        { term: 'Beneficiary Management', category: 'NAV', referenceCode: 'beneficiaries', desc: 'Registered transfer destinations' },
+        { term: 'Transaction History & Audit', category: 'NAV', referenceCode: 'history', desc: 'Statements and double-entry ledger proofs' },
+        { term: 'In-App Notifications', category: 'NAV', referenceCode: 'notifications', desc: 'Transactional outbox event feed' },
+        { term: 'System Insights & Telemetry', category: 'NAV', referenceCode: 'system-insights', desc: 'Rate limiting, sharding, consistent hashing' }
+    ];
+
+    const q = query.toLowerCase();
+    return navItems.filter(item => item.term.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q));
+}
+
+function renderGlobalSearchDropdown(suggestions, navMatches, query) {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+    autocompleteState.global.items = [];
+    autocompleteState.global.selectedIndex = -1;
+
+    const totalResults = suggestions.length + navMatches.length;
+
+    if (totalResults === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'autocomplete-state-msg';
+        emptyDiv.textContent = `No results found for "${query}"`;
+        dropdown.appendChild(emptyDiv);
+        dropdown.classList.add('active');
+        return;
+    }
+
+    // Group suggestions by category
+    const recipients = suggestions.filter(s => s.category === 'BENEFICIARY');
+    const billers = suggestions.filter(s => s.category !== 'BENEFICIARY');
+
+    // 1. Beneficiaries Section
+    if (recipients.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'autocomplete-group-title';
+        title.textContent = 'Transfer Beneficiaries / Recipients';
+        dropdown.appendChild(title);
+
+        recipients.forEach(item => {
+            const row = createAutocompleteRow(item, query, 'person', 'Recipient', () => {
+                selectGlobalRecipient(item);
+            });
+            dropdown.appendChild(row);
+            autocompleteState.global.items.push({ row, action: () => selectGlobalRecipient(item) });
+        });
+    }
+
+    // 2. Utility Billers Section
+    if (billers.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'autocomplete-group-title';
+        title.textContent = 'Supported Utility Providers';
+        dropdown.appendChild(title);
+
+        billers.forEach(item => {
+            const row = createAutocompleteRow(item, query, 'receipt_long', item.category, () => {
+                selectGlobalBiller(item);
+            });
+            dropdown.appendChild(row);
+            autocompleteState.global.items.push({ row, action: () => selectGlobalBiller(item) });
+        });
+    }
+
+    // 3. Navigation Shortcuts Section
+    if (navMatches.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'autocomplete-group-title';
+        title.textContent = 'Application Views & Shortcuts';
+        dropdown.appendChild(title);
+
+        navMatches.forEach(item => {
+            const row = createAutocompleteRow(item, query, 'navigation', 'Shortcut', () => {
+                showSection(item.referenceCode);
+                clearGlobalSearch();
+            });
+            dropdown.appendChild(row);
+            autocompleteState.global.items.push({ row, action: () => {
+                showSection(item.referenceCode);
+                clearGlobalSearch();
+            }});
+        });
+    }
+
+    dropdown.classList.add('active');
+}
+
+function createAutocompleteRow(item, query, iconName, badgeText, onSelect) {
+    const row = document.createElement('div');
+    row.className = 'autocomplete-option';
+    row.role = 'option';
+
+    const left = document.createElement('div');
+    left.className = 'autocomplete-option-left';
+
+    const iconBadge = document.createElement('div');
+    iconBadge.className = 'autocomplete-icon-badge';
+    iconBadge.innerHTML = `<span class="material-symbols-outlined" style="font-size: 15px;">${iconName}</span>`;
+
+    const textCol = document.createElement('div');
+    textCol.className = 'autocomplete-text-col';
+
+    const mainText = document.createElement('div');
+    mainText.className = 'autocomplete-main-text';
+    highlightTextInElement(mainText, item.term, query);
+
+    const subText = document.createElement('div');
+    subText.className = 'autocomplete-sub-text';
+    subText.textContent = item.referenceCode ? `${item.referenceCode} · ${item.desc || item.category}` : (item.desc || '');
+
+    textCol.appendChild(mainText);
+    textCol.appendChild(subText);
+
+    left.appendChild(iconBadge);
+    left.appendChild(textCol);
+
+    const badge = document.createElement('span');
+    badge.className = `autocomplete-badge ${badgeText === 'Recipient' ? 'autocomplete-badge-beneficiary' : badgeText === 'Shortcut' ? 'autocomplete-badge-nav' : 'autocomplete-badge-biller'}`;
+    badge.textContent = badgeText;
+
+    row.appendChild(left);
+    row.appendChild(badge);
+
+    row.addEventListener('click', onSelect);
+    return row;
+}
+
+function selectGlobalRecipient(item) {
+    clearGlobalSearch();
+    showSection('transfers');
+    setTransferRecipient(item.term, item.referenceCode);
+}
+
+function selectGlobalBiller(item) {
+    clearGlobalSearch();
+    showSection('bills');
+    document.getElementById('biller-search-input').value = item.term;
+    document.getElementById('bill-biller-select').value = item.referenceCode;
+}
+
+function onGlobalSearchKeyDown(e) {
+    const stateObj = autocompleteState.global;
+    if (!stateObj.items.length) return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        stateObj.selectedIndex = (stateObj.selectedIndex + 1) % stateObj.items.length;
+        updateAutocompleteHighlight(stateObj);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        stateObj.selectedIndex = (stateObj.selectedIndex - 1 + stateObj.items.length) % stateObj.items.length;
+        updateAutocompleteHighlight(stateObj);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (stateObj.selectedIndex >= 0 && stateObj.selectedIndex < stateObj.items.length) {
+            stateObj.items[stateObj.selectedIndex].action();
+        }
+    } else if (e.key === 'Escape') {
+        clearGlobalSearch();
+    }
+}
+
+function updateAutocompleteHighlight(stateObj) {
+    stateObj.items.forEach((item, index) => {
+        item.row.classList.toggle('is-selected', index === stateObj.selectedIndex);
+        if (index === stateObj.selectedIndex) {
+            item.row.scrollIntoView({ block: 'nearest' });
+        }
+    });
+}
+
+// ================= TRANSFERS & RECIPIENT AUTOCOMPLETE =================
 function regenerateIdempotencyKey() {
     const key = 'IDEMP-' + crypto.randomUUID();
     const input = document.getElementById('transfer-idempotency-key');
     if (input) input.value = key;
 }
 
+function copyIdempotencyKey() {
+    const input = document.getElementById('transfer-idempotency-key');
+    if (input && input.value) {
+        navigator.clipboard.writeText(input.value);
+        showToast('Idempotency Key copied to clipboard', 'info');
+    }
+}
+
 function prepareTransferSection() {
     loadAccounts();
+    loadBeneficiaries();
     regenerateIdempotencyKey();
-    document.getElementById('transfer-result-card').style.display = 'none';
+    const resCard = document.getElementById('transfer-result-card');
+    if (resCard) resCard.style.display = 'none';
+    onTransferAmountInput(document.getElementById('transfer-amount')?.value || '0');
 }
 
 function quickTransferFrom(accountNumber) {
     showSection('transfers');
     const select = document.getElementById('transfer-source-account');
     if (select) select.value = accountNumber;
+    onTransferSourceChange();
+}
+
+function onTransferSourceChange() {
+    onTransferAmountInput(document.getElementById('transfer-amount')?.value || '0');
+}
+
+function onTransferAmountInput(amountVal) {
+    const srcAccountNum = document.getElementById('transfer-source-account')?.value;
+    const remainingEl = document.getElementById('transfer-remaining-balance');
+    if (!remainingEl) return;
+
+    const acc = state.accounts.find(a => a.accountNumber === srcAccountNum) || state.currentAccount;
+    if (!acc) {
+        remainingEl.textContent = '₹ 0.00 INR';
+        return;
+    }
+
+    const currentBal = parseFloat(acc.balance) || 0;
+    const sendAmt = parseFloat(amountVal) || 0;
+    const postSettlement = currentBal - sendAmt;
+
+    if (sendAmt > currentBal) {
+        remainingEl.innerHTML = `<span style="color: var(--status-error-text); font-weight: 700;">Insufficient Balance (₹${postSettlement.toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR)</span>`;
+    } else {
+        remainingEl.innerHTML = `₹ ${postSettlement.toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR`;
+    }
+}
+
+function applyTransferPreset(amt) {
+    const input = document.getElementById('transfer-amount');
+    if (input) {
+        const cur = parseFloat(input.value) || 0;
+        input.value = (cur + amt).toFixed(2);
+        onTransferAmountInput(input.value);
+    }
+}
+
+function applyTransferMax() {
+    const srcAccountNum = document.getElementById('transfer-source-account')?.value;
+    const acc = state.accounts.find(a => a.accountNumber === srcAccountNum) || state.currentAccount;
+    if (acc) {
+        const input = document.getElementById('transfer-amount');
+        if (input) {
+            input.value = parseFloat(acc.balance).toFixed(2);
+            onTransferAmountInput(input.value);
+        }
+    }
+}
+
+// Recipient Search on Transfers Page
+let transferRecipientDebounce = null;
+
+function onTransferRecipientInput(val) {
+    const clearBtn = document.getElementById('transfer-recipient-clear');
+    const dropdown = document.getElementById('transfer-recipient-dropdown');
+
+    if (val && val.length > 0) {
+        if (clearBtn) clearBtn.style.display = 'block';
+    } else {
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (dropdown) dropdown.classList.remove('active');
+        return;
+    }
+
+    const trimmed = val.trim();
+    if (trimmed.length < 1) {
+        if (dropdown) dropdown.classList.remove('active');
+        return;
+    }
+
+    clearTimeout(transferRecipientDebounce);
+    const queryId = ++autocompleteState.transfer.activeQueryId;
+
+    transferRecipientDebounce = setTimeout(async () => {
+        try {
+            // Query Trie autocomplete endpoint
+            const res = await fetch(`${API_BASE}/autocomplete?prefix=${encodeURIComponent(trimmed)}&limit=10`);
+            if (queryId !== autocompleteState.transfer.activeQueryId) return;
+
+            const data = await res.json();
+            const suggestions = data.suggestions || [];
+
+            // Blend with local user beneficiaries
+            const localMatches = state.beneficiaries.filter(b => 
+                b.name.toLowerCase().includes(trimmed.toLowerCase()) || 
+                b.accountNumber.toLowerCase().includes(trimmed.toLowerCase())
+            );
+
+            renderTransferRecipientDropdown(suggestions, localMatches, trimmed);
+        } catch (err) {
+            console.error('Recipient autocomplete error', err);
+        }
+    }, 250);
+}
+
+function renderTransferRecipientDropdown(suggestions, localMatches, query) {
+    const dropdown = document.getElementById('transfer-recipient-dropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '';
+    autocompleteState.transfer.items = [];
+    autocompleteState.transfer.selectedIndex = -1;
+
+    // Filter Trie suggestions for beneficiaries or direct account hits
+    const trieBeneficiaries = suggestions.filter(s => s.category === 'BENEFICIARY');
+
+    // Combine distinct entries
+    const combined = [];
+    const seenAccounts = new Set();
+
+    localMatches.forEach(b => {
+        if (!seenAccounts.has(b.accountNumber)) {
+            seenAccounts.add(b.accountNumber);
+            combined.push({ term: b.name, referenceCode: b.accountNumber, desc: b.bankName || 'Verified Beneficiary' });
+        }
+    });
+
+    trieBeneficiaries.forEach(s => {
+        if (!seenAccounts.has(s.referenceCode)) {
+            seenAccounts.add(s.referenceCode);
+            combined.push({ term: s.term, referenceCode: s.referenceCode, desc: 'Cluster Trie Directory' });
+        }
+    });
+
+    if (combined.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'autocomplete-state-msg';
+        emptyDiv.textContent = `No recipients matching "${query}". You can enter the account number directly.`;
+        dropdown.appendChild(emptyDiv);
+        dropdown.classList.add('active');
+        return;
+    }
+
+    combined.forEach(item => {
+        const row = createAutocompleteRow(item, query, 'person', 'Verified', () => {
+            setTransferRecipient(item.term, item.referenceCode);
+            dropdown.classList.remove('active');
+        });
+        dropdown.appendChild(row);
+        autocompleteState.transfer.items.push({
+            row,
+            action: () => {
+                setTransferRecipient(item.term, item.referenceCode);
+                dropdown.classList.remove('active');
+            }
+        });
+    });
+
+    dropdown.classList.add('active');
+}
+
+function onTransferRecipientKeyDown(e) {
+    const stateObj = autocompleteState.transfer;
+    if (!stateObj.items.length) return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        stateObj.selectedIndex = (stateObj.selectedIndex + 1) % stateObj.items.length;
+        updateAutocompleteHighlight(stateObj);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        stateObj.selectedIndex = (stateObj.selectedIndex - 1 + stateObj.items.length) % stateObj.items.length;
+        updateAutocompleteHighlight(stateObj);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (stateObj.selectedIndex >= 0 && stateObj.selectedIndex < stateObj.items.length) {
+            stateObj.items[stateObj.selectedIndex].action();
+        }
+    } else if (e.key === 'Escape') {
+        const dropdown = document.getElementById('transfer-recipient-dropdown');
+        if (dropdown) dropdown.classList.remove('active');
+    }
+}
+
+function setTransferRecipient(name, accountNumber) {
+    const searchInput = document.getElementById('transfer-recipient-search-input');
+    const destAccountInput = document.getElementById('transfer-dest-account');
+    const card = document.getElementById('transfer-verified-recipient-card');
+    const cardName = document.getElementById('verified-recipient-name');
+    const cardAcc = document.getElementById('verified-recipient-acc');
+    const cardAvatar = document.getElementById('verified-recipient-avatar');
+    const clearBtn = document.getElementById('transfer-recipient-clear');
+    const dropdown = document.getElementById('transfer-recipient-dropdown');
+
+    if (searchInput) searchInput.value = name;
+    if (destAccountInput) destAccountInput.value = accountNumber;
+    if (clearBtn) clearBtn.style.display = 'block';
+    if (dropdown) dropdown.classList.remove('active');
+
+    if (card) {
+        if (cardName) cardName.textContent = name;
+        if (cardAcc) cardAcc.textContent = accountNumber;
+        if (cardAvatar) {
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            cardAvatar.textContent = initials || 'RE';
+        }
+        card.style.display = 'flex';
+    }
+}
+
+function clearTransferRecipient() {
+    const searchInput = document.getElementById('transfer-recipient-search-input');
+    const destAccountInput = document.getElementById('transfer-dest-account');
+    const card = document.getElementById('transfer-verified-recipient-card');
+    const clearBtn = document.getElementById('transfer-recipient-clear');
+    const dropdown = document.getElementById('transfer-recipient-dropdown');
+
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+    if (destAccountInput) destAccountInput.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (card) card.style.display = 'none';
+    if (dropdown) dropdown.classList.remove('active');
 }
 
 async function handleTransferSubmit(e) {
@@ -374,6 +934,16 @@ async function handleTransferSubmit(e) {
     const description = document.getElementById('transfer-description').value;
     const idempotencyKey = document.getElementById('transfer-idempotency-key').value;
     const btn = document.getElementById('btn-transfer-submit');
+
+    if (!destinationAccountNumber) {
+        showToast('Please search and select a verified recipient destination', 'error');
+        return;
+    }
+
+    if (sourceAccountNumber === destinationAccountNumber) {
+        showToast('Source and destination accounts must be distinct', 'error');
+        return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Processing transaction in cluster...';
@@ -406,22 +976,22 @@ async function handleTransferSubmit(e) {
             return;
         }
 
-        // Show confirmation card
+        // Show confirmation receipt card
         const resultCard = document.getElementById('transfer-result-card');
         const resultMsg = document.getElementById('transfer-result-message');
         const resultDetails = document.getElementById('transfer-result-details');
 
         resultMsg.textContent = data.message;
         resultDetails.innerHTML = `
-            Reference: <strong>${data.transactionReference}</strong><br>
-            Amount: <strong>₹${parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR</strong><br>
-            Source: ${data.sourceAccountNumber} ➔ Destination: ${data.destinationAccountNumber}<br>
-            Updated Source Balance: <strong>₹${parseFloat(data.sourceBalanceAfter).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR</strong><br>
-            Status: ${data.status} | Idempotent Replay: ${data.idempotentReplay}
+Transaction Reference: <strong>${escapeHtml(data.transactionReference)}</strong>
+Principal Amount: <strong>₹${parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR</strong>
+Routing: ${escapeHtml(data.sourceAccountNumber)} ➔ ${escapeHtml(data.destinationAccountNumber)}
+Updated Ledger Balance: <strong>₹${parseFloat(data.sourceBalanceAfter).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR</strong>
+Cluster Status: ${escapeHtml(data.status)} | Idempotent Replay: ${data.idempotentReplay}
         `;
         resultCard.style.display = 'block';
 
-        showToast('Transfer completed successfully!', 'success');
+        showToast('Atomic transfer settled successfully!', 'success');
         loadAccounts();
         loadNotifications();
         regenerateIdempotencyKey();
@@ -455,7 +1025,8 @@ async function loadBeneficiaryCount() {
         });
         if (res.ok) {
             const list = await res.json();
-            document.getElementById('dash-beneficiary-count').textContent = list.length;
+            const el = document.getElementById('dash-beneficiary-count');
+            if (el) el.textContent = list.length;
         }
     } catch (ignored) {}
 }
@@ -466,7 +1037,7 @@ function renderBeneficiaries() {
 
     grid.innerHTML = '';
     if (state.beneficiaries.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">No beneficiaries added yet.</p>';
+        grid.innerHTML = '<p class="autocomplete-state-msg" style="grid-column: 1/-1;">No beneficiaries added yet.</p>';
         return;
     }
 
@@ -474,21 +1045,34 @@ function renderBeneficiaries() {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin-bottom: 0.25rem;">${b.name}</div>
-            <div style="font-family: monospace; color: #818cf8; font-size: 0.9rem; margin-bottom: 0.5rem;">${b.accountNumber}</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Bank: ${b.bankName}</div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <div class="recipient-avatar-box">${escapeHtml(b.name.substring(0, 2).toUpperCase())}</div>
+                <div>
+                    <div style="font-weight: 600; font-size: 14px;">${escapeHtml(b.name)}</div>
+                    <div class="mono" style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(b.accountNumber)}</div>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 1rem;">
+                Bank: <span style="color: var(--text-primary); font-weight: 500;">${escapeHtml(b.bankName)}</span>
+            </div>
             <div style="display: flex; gap: 0.5rem;">
-                <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="transferToBeneficiary('${b.accountNumber}')">Transfer</button>
-                <button class="btn btn-outline-danger" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="removeBeneficiary('${b.id}')">Delete</button>
+                <button class="btn btn-primary btn-sm" onclick="transferToBeneficiary('${b.name}', '${b.accountNumber}')">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">send</span>
+                    Transfer
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="removeBeneficiary('${b.id}')">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                    Delete
+                </button>
             </div>
         `;
         grid.appendChild(card);
     });
 }
 
-function transferToBeneficiary(accountNumber) {
+function transferToBeneficiary(name, accountNumber) {
     showSection('transfers');
-    document.getElementById('transfer-dest-account').value = accountNumber;
+    setTransferRecipient(name, accountNumber);
 }
 
 function openBeneficiarySelector() {
@@ -496,20 +1080,23 @@ function openBeneficiarySelector() {
     const list = document.getElementById('transfer-beneficiary-picker-list');
     list.innerHTML = '';
     if (state.beneficiaries.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No beneficiaries available.</p>';
+        list.innerHTML = '<p class="autocomplete-state-msg">No beneficiaries available. You can add one under the Beneficiaries tab.</p>';
     } else {
         state.beneficiaries.forEach(b => {
             const item = document.createElement('div');
-            item.className = 'autocomplete-item';
+            item.className = 'autocomplete-option';
             item.innerHTML = `
-                <div>
-                    <strong>${b.name}</strong>
-                    <div style="font-family: monospace; font-size: 0.8rem; color: #818cf8;">${b.accountNumber}</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="recipient-avatar-box">${escapeHtml(b.name.substring(0, 2).toUpperCase())}</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 13px;">${escapeHtml(b.name)}</div>
+                        <div class="mono" style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(b.accountNumber)}</div>
+                    </div>
                 </div>
-                <button class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Select</button>
+                <button class="btn btn-secondary btn-sm">Select</button>
             `;
             item.onclick = () => {
-                document.getElementById('transfer-dest-account').value = b.accountNumber;
+                setTransferRecipient(b.name, b.accountNumber);
                 closeModal('modal-select-beneficiary');
             };
             list.appendChild(item);
@@ -541,7 +1128,7 @@ async function handleAddBeneficiarySubmit(e) {
         }
 
         closeModal('modal-add-beneficiary');
-        showToast('Beneficiary registered successfully!', 'success');
+        showToast('Beneficiary registered and indexed in Trie!', 'success');
         loadBeneficiaries();
     } catch (err) {
         showToast('Error adding beneficiary: ' + err.message, 'error');
@@ -556,7 +1143,7 @@ async function removeBeneficiary(id) {
             headers: { 'Authorization': `Bearer ${state.token}` }
         });
         if (res.ok) {
-            showToast('Beneficiary deleted', 'info');
+            showToast('Beneficiary removed', 'info');
             loadBeneficiaries();
         }
     } catch (err) {
@@ -582,7 +1169,7 @@ async function loadBillers(category = 'ALL') {
 }
 
 function filterBillerCategory(category) {
-    document.querySelectorAll('#section-bills .tab-btn').forEach(b => {
+    document.querySelectorAll('#section-bills .segmented-btn').forEach(b => {
         b.classList.toggle('active', b.textContent.toUpperCase() === category);
     });
     loadBillers(category);
@@ -590,6 +1177,7 @@ function filterBillerCategory(category) {
 
 function renderBillerSelect() {
     const sel = document.getElementById('bill-biller-select');
+    if (!sel) return;
     sel.innerHTML = '<option value="">-- Select Utility Provider --</option>';
     state.billers.forEach(b => {
         const opt = document.createElement('option');
@@ -602,34 +1190,43 @@ function renderBillerSelect() {
 function onBillerSelected(billerCode) {
     const biller = state.billers.find(b => b.billerCode === billerCode);
     if (biller) {
-        document.getElementById('biller-search-input').value = biller.name;
+        const searchInput = document.getElementById('biller-search-input');
+        if (searchInput) searchInput.value = biller.name;
     }
 }
 
-let searchDebounceTimeout = null;
+let billerSearchDebounce = null;
 function onBillerSearchInput(prefix) {
-    clearTimeout(searchDebounceTimeout);
+    clearTimeout(billerSearchDebounce);
     const dropdown = document.getElementById('biller-autocomplete-dropdown');
-    if (!prefix || prefix.length < 2) {
-        dropdown.classList.remove('active');
+    if (!prefix || prefix.length < 1) {
+        if (dropdown) dropdown.classList.remove('active');
         return;
     }
 
-    searchDebounceTimeout = setTimeout(async () => {
+    const trimmed = prefix.trim();
+    billerSearchDebounce = setTimeout(async () => {
         try {
-            const res = await fetch(`${API_BASE}/autocomplete?prefix=${encodeURIComponent(prefix)}`);
+            const res = await fetch(`${API_BASE}/autocomplete?prefix=${encodeURIComponent(trimmed)}&limit=8`);
             const data = await res.json();
+            if (!dropdown) return;
             dropdown.innerHTML = '';
-            if (data.suggestions && data.suggestions.length > 0) {
-                data.suggestions.forEach(s => {
+            
+            const billerSuggestions = (data.suggestions || []).filter(s => s.category !== 'BENEFICIARY');
+
+            if (billerSuggestions.length > 0) {
+                billerSuggestions.forEach(s => {
                     const item = document.createElement('div');
-                    item.className = 'autocomplete-item';
+                    item.className = 'autocomplete-option';
                     item.innerHTML = `
-                        <div>
-                            <strong>${s.term}</strong>
-                            <div style="font-size: 0.75rem; color: #818cf8;">Code: ${s.referenceCode}</div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span class="material-symbols-outlined" style="color: var(--primary); font-size: 16px;">receipt</span>
+                            <div>
+                                <div style="font-weight: 500; font-size: 13px;">${escapeHtml(s.term)}</div>
+                                <div class="mono" style="font-size: 11px; color: var(--text-muted);">${escapeHtml(s.referenceCode)}</div>
+                            </div>
                         </div>
-                        <span class="badge badge-active">${s.category}</span>
+                        <span class="badge badge-neutral">${escapeHtml(s.category)}</span>
                     `;
                     item.onclick = () => {
                         document.getElementById('bill-biller-select').value = s.referenceCode;
@@ -643,7 +1240,7 @@ function onBillerSearchInput(prefix) {
                 dropdown.classList.remove('active');
             }
         } catch (err) {
-            console.error('Autocomplete fetch failed', err);
+            console.error('Biller autocomplete failed', err);
         }
     }, 200);
 }
@@ -654,6 +1251,10 @@ async function handleBillPaySubmit(e) {
     const billerCode = document.getElementById('bill-biller-select').value;
     const consumerReference = document.getElementById('bill-consumer-ref').value;
     const amount = document.getElementById('bill-amount').value;
+    const btn = document.getElementById('btn-bill-submit');
+
+    btn.disabled = true;
+    btn.textContent = 'Settling bill...';
 
     try {
         const res = await fetch(`${API_BASE}/bills/pay`, {
@@ -670,7 +1271,7 @@ async function handleBillPaySubmit(e) {
             return;
         }
 
-        showToast(`Utility bill paid successfully! Ref: ${data.paymentReference}`, 'success');
+        showToast(`Utility bill settled! Reference: ${data.paymentReference}`, 'success');
         document.getElementById('bill-amount').value = '';
         document.getElementById('bill-consumer-ref').value = '';
         loadAccounts();
@@ -678,6 +1279,9 @@ async function handleBillPaySubmit(e) {
         loadNotifications();
     } catch (err) {
         showToast('Bill payment error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Settle Utility Bill';
     }
 }
 
@@ -690,20 +1294,21 @@ async function loadBillHistory() {
 
         const list = await res.json();
         const tbody = document.getElementById('bill-history-tbody');
+        if (!tbody) return;
         tbody.innerHTML = '';
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No bill payments recorded yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="autocomplete-state-msg">No bill payments recorded yet.</td></tr>';
             return;
         }
 
         list.forEach(p => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${new Date(p.timestamp).toLocaleDateString()}</td>
-                <td><strong>${p.billerName}</strong></td>
-                <td><code style="color: #a5b4fc;">${p.consumerReference}</code></td>
-                <td>₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td><span class="badge badge-credit">${p.status}</span></td>
+                <td class="mono">${new Date(p.timestamp).toLocaleDateString()}</td>
+                <td><strong>${escapeHtml(p.billerName)}</strong></td>
+                <td><span class="mono">${escapeHtml(p.consumerReference)}</span></td>
+                <td class="text-right mono" style="font-weight: 600;">₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td><span class="badge badge-success">${escapeHtml(p.status)}</span></td>
             `;
             tbody.appendChild(tr);
         });
@@ -741,9 +1346,13 @@ async function loadTransactionHistory(page = 0) {
 
         renderTransactionTable('history-table-tbody', data.content, true);
 
-        document.getElementById('history-page-info').textContent = `Page ${page + 1} of ${Math.max(1, data.totalPages)} (Total: ${data.totalElements})`;
-        document.getElementById('btn-hist-prev').disabled = page <= 0;
-        document.getElementById('btn-hist-next').disabled = page >= data.totalPages - 1;
+        const pageInfo = document.getElementById('history-page-info');
+        const prevBtn = document.getElementById('btn-hist-prev');
+        const nextBtn = document.getElementById('btn-hist-next');
+
+        if (pageInfo) pageInfo.textContent = `Page ${page + 1} of ${Math.max(1, data.totalPages)} (Total: ${data.totalElements} records)`;
+        if (prevBtn) prevBtn.disabled = page <= 0;
+        if (nextBtn) nextBtn.disabled = page >= data.totalPages - 1;
     } catch (err) {
         console.error('Failed to load transaction history', err);
     }
@@ -767,7 +1376,7 @@ function renderTransactionTable(tbodyId, transactions, showAuditButton = false) 
 
     tbody.innerHTML = '';
     if (!transactions || transactions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${showAuditButton ? 9 : 7}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No transaction records found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${showAuditButton ? 9 : 7}" class="autocomplete-state-msg">No transaction records found.</td></tr>`;
         return;
     }
 
@@ -780,17 +1389,17 @@ function renderTransactionTable(tbodyId, transactions, showAuditButton = false) 
 
         let auditTd = '';
         if (showAuditButton) {
-            auditTd = `<td><button class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;" onclick="auditLedger('${t.transactionReference}')">Audit Ledger</button></td>`;
+            auditTd = `<td style="text-align: center;"><button class="btn btn-secondary btn-sm" onclick="auditLedger('${t.transactionReference}')">Audit Ledger</button></td>`;
         }
 
         tr.innerHTML = `
-            <td>${new Date(t.timestamp).toLocaleString()}</td>
-            <td><code style="color: #818cf8;">${t.transactionReference}</code></td>
-            <td>${t.type}</td>
-            <td><span class="badge ${badgeClass}">${t.direction}</span></td>
-            <td style="font-family: monospace;">${counterparty || 'N/A'}</td>
-            <td style="font-weight: 700; color: ${isDebit ? '#fca5a5' : '#86efac'};">${sign}₹${parseFloat(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-            <td><span class="badge badge-credit">${t.status}</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--text-secondary);">${new Date(t.timestamp).toLocaleString()}</td>
+            <td><span class="mono" style="font-weight: 500;">${escapeHtml(t.transactionReference)}</span></td>
+            <td><span class="badge badge-neutral">${escapeHtml(t.type)}</span></td>
+            <td><span class="badge ${badgeClass}">${escapeHtml(t.direction)}</span></td>
+            <td class="mono">${escapeHtml(counterparty || 'N/A')}</td>
+            <td class="text-right mono" style="font-weight: 600; color: ${isDebit ? 'var(--status-error-text)' : 'var(--status-healthy-text)'};">${sign}₹${parseFloat(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            <td><span class="badge badge-success">${escapeHtml(t.status)}</span></td>
             ${auditTd}
         `;
         tbody.appendChild(tr);
@@ -806,16 +1415,16 @@ async function auditLedger(reference) {
 
         const detailsEl = document.getElementById('ledger-audit-details');
         detailsEl.innerHTML = `
-Transaction Reference: <strong>${audit.transactionReference}</strong>
-Entry Count: <strong>${audit.entryCount}</strong> (Double-Entry Pairs)
-Total Debits: <strong>₹${parseFloat(audit.totalDebits).toFixed(2)} INR</strong>
-Total Credits: <strong>₹${parseFloat(audit.totalCredits).toFixed(2)} INR</strong>
-Mathematical Balance Difference: <strong>₹${parseFloat(audit.difference).toFixed(2)} INR</strong>
-Ledger Status: <span style="color: ${audit.isBalanced ? '#34d399' : '#f87171'}; font-weight: 700;">
-  ${audit.isBalanced ? '✓ PERFECTLY BALANCED (Sum Debits == Sum Credits)' : '✗ UNBALANCED ERROR'}
-</span>
+=== Double-Entry Forensic Verification ===
+Transaction Reference: ${audit.transactionReference}
+Total Debits:          ₹ ${parseFloat(audit.totalDebits).toFixed(2)} INR
+Total Credits:         ₹ ${parseFloat(audit.totalCredits).toFixed(2)} INR
+Mathematical Delta:    ₹ ${parseFloat(audit.difference).toFixed(2)} INR
 
-=== Double-Entry Ledger Records ===
+Ledger Invariant Status:
+${audit.isBalanced ? '✓ PERFECTLY BALANCED [Sum(Debits) == Sum(Credits)]' : '✗ RECONCILIATION ERROR'}
+
+Ledger Journal Postings:
 ${JSON.stringify(audit.ledgerEntries, null, 2)}
         `;
         openModal('modal-ledger-audit');
@@ -833,7 +1442,12 @@ async function loadNotifications() {
         if (!res.ok) return;
 
         const data = await res.json();
-        document.getElementById('unread-count').textContent = data.unreadCount;
+        const unreadCountEl = document.getElementById('unread-count');
+        const notifDot = document.getElementById('notif-dot');
+
+        if (unreadCountEl) unreadCountEl.textContent = data.unreadCount;
+        if (notifDot) notifDot.style.display = data.unreadCount > 0 ? 'block' : 'none';
+
         renderNotifications(data.notifications);
     } catch (ignored) {}
 }
@@ -844,25 +1458,25 @@ function renderNotifications(notifications) {
 
     list.innerHTML = '';
     if (!notifications || notifications.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No notifications.</p>';
+        list.innerHTML = '<p class="autocomplete-state-msg">No notifications.</p>';
         return;
     }
 
     notifications.forEach(n => {
         const card = document.createElement('div');
-        card.style.background = n.read ? 'rgba(255,255,255,0.02)' : 'rgba(99,102,241,0.08)';
-        card.style.border = '1px solid ' + (n.read ? 'var(--border-subtle)' : 'rgba(99,102,241,0.3)');
-        card.style.borderRadius = 'var(--radius-md)';
-        card.style.padding = '1rem';
+        card.style.background = n.read ? 'var(--surface-card)' : 'var(--surface-low)';
+        card.style.border = '1px solid ' + (n.read ? 'var(--border)' : 'var(--primary-fixed)');
+        card.style.borderRadius = 'var(--radius-sm)';
+        card.style.padding = '0.85rem 1rem';
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.25rem;">
-                <strong>${n.title}</strong>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">${new Date(n.timestamp).toLocaleTimeString()}</span>
+                <strong style="font-size: 13px;">${escapeHtml(n.title)}</strong>
+                <span class="mono" style="font-size: 11px; color: var(--text-muted);">${new Date(n.timestamp).toLocaleTimeString()}</span>
             </div>
-            <p style="font-size: 0.85rem; margin-bottom: 0.5rem; color: #e2e8f0;">${n.message}</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.5rem;">${escapeHtml(n.message)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span class="badge ${n.read ? 'badge-active' : 'badge-debit'}">${n.read ? 'READ' : 'UNREAD'}</span>
-                ${!n.read ? `<button class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="markNotificationAsRead('${n.notificationId}')">Mark Read</button>` : ''}
+                <span class="badge ${n.read ? 'badge-neutral' : 'badge-success'}">${n.read ? 'READ' : 'UNREAD'}</span>
+                ${!n.read ? `<button class="btn btn-secondary btn-sm" onclick="markNotificationAsRead('${n.notificationId}')">Mark as Read</button>` : ''}
             </div>
         `;
         list.appendChild(card);
@@ -892,7 +1506,7 @@ async function markAllNotificationsAsRead() {
 
 // ================= SYSTEM INSIGHTS =================
 function switchInsightTab(tabId) {
-    document.querySelectorAll('#section-system-insights .tab-btn').forEach(b => {
+    document.querySelectorAll('#section-system-insights .insight-tab-pill').forEach(b => {
         b.classList.toggle('active', b.getAttribute('onclick')?.includes(tabId));
     });
     document.querySelectorAll('.insight-content').forEach(c => {
@@ -920,7 +1534,7 @@ async function loadRateLimiterMetrics() {
 
 async function simulateBurstTraffic(count = 15) {
     const output = document.getElementById('rl-burst-results');
-    output.innerHTML = 'Fring 15 rapid concurrent requests to /api/auth/login with token bucket evaluation...\n';
+    output.textContent = 'Firing 15 rapid concurrent requests to /api/auth/login with token-bucket evaluation...\n';
 
     let allowed = 0;
     let rejected = 0;
@@ -934,22 +1548,22 @@ async function simulateBurstTraffic(count = 15) {
             });
             if (res.status === 429) {
                 rejected++;
-                output.innerHTML += `Request #${i}: HTTP 429 Too Many Requests [REJECTED by Redis Token Bucket]\n`;
+                output.textContent += `Request #${i}: HTTP 429 Too Many Requests [REJECTED by Redis Token Bucket]\n`;
             } else {
                 allowed++;
-                output.innerHTML += `Request #${i}: HTTP ${res.status} [ALLOWED by Token Bucket]\n`;
+                output.textContent += `Request #${i}: HTTP ${res.status} [ALLOWED by Token Bucket]\n`;
             }
         } catch (e) {
-            output.innerHTML += `Request #${i}: Error: ${e.message}\n`;
+            output.textContent += `Request #${i}: Error: ${e.message}\n`;
         }
     }
-    output.innerHTML += `\nTest Complete: ${allowed} Allowed, ${rejected} Rejected (HTTP 429).`;
+    output.textContent += `\nTest Complete: ${allowed} Allowed, ${rejected} Rejected (HTTP 429).`;
     loadRateLimiterMetrics();
 }
 
 async function resetRateLimiterMetrics() {
     await fetch(`${API_BASE}/system/ratelimiter/reset`, { method: 'POST' });
-    showToast('Rate limiter metrics reset', 'info');
+    showToast('Rate limiter telemetry reset', 'info');
     loadRateLimiterMetrics();
 }
 
@@ -1007,12 +1621,12 @@ async function runIdBenchmark(count) {
         const res = await fetch(`${API_BASE}/system/id-benchmark?count=${count}`);
         const data = await res.json();
         out.textContent = `=== Unique ID Benchmark Results ===
-Sample Size: ${data.sampleSize.toLocaleString()} IDs
-Total Duration: ${data.durationMs} ms
-Throughput: ${data.ratePerSecond.toLocaleString()} IDs / second
-Collisions Observed: ${data.collisionsObserved} (0.00% Collision Rate)
-Generated Sample ID: ${data.sampleId}
-Timestamp: ${data.timestamp}`;
+Sample Size:        ${data.sampleSize.toLocaleString()} IDs
+Total Duration:     ${data.durationMs} ms
+Throughput:         ${data.ratePerSecond.toLocaleString()} IDs / second
+Collisions:         ${data.collisionsObserved} (0.00% Collision Rate)
+Sample Generated:   ${data.sampleId}
+Timestamp:          ${data.timestamp}`;
     } catch (err) {
         out.textContent = 'Benchmark error: ' + err.message;
     }
@@ -1031,9 +1645,9 @@ async function createShortUrl() {
         const resDiv = document.getElementById('shortener-result');
         resDiv.style.display = 'block';
         resDiv.innerHTML = `
-            Short Code Created: <code style="color: #a5b4fc; font-weight: 700;">${data.shortCode}</code><br>
-            Short Link: <a href="${data.shortUrl}" target="_blank" style="color: #67e8f9;">${window.location.origin}${data.shortUrl}</a><br>
-            Redirects to: <code>${data.targetUrl}</code> (Cached via Redis)
+            Short Code: <strong class="mono">${escapeHtml(data.shortCode)}</strong><br>
+            Short Link: <a href="${data.shortUrl}" target="_blank" style="color: var(--primary); font-weight: 500;">${window.location.origin}${data.shortUrl}</a><br>
+            Target Route: <code class="mono">${escapeHtml(data.targetUrl)}</code> (Redis Cache-Aside)
         `;
         loadShortenerMetrics();
     } catch (err) {
@@ -1058,10 +1672,10 @@ async function evaluateTrieQuery() {
         const res = await fetch(`${API_BASE}/autocomplete?prefix=${encodeURIComponent(prefix)}`);
         const data = await res.json();
         out.textContent = `=== Trie & Redis Autocomplete Evaluation ===
-Search Prefix: "${data.prefix}"
-Data Source: ${data.source}
-Redis Cache Hit: ${data.cached}
-Lookup Latency: ${data.latencyMicroseconds} µs (${(data.latencyMicroseconds / 1000).toFixed(4)} ms)
+Prefix:             "${data.prefix}"
+Data Source:        ${data.source}
+Redis Cache Hit:    ${data.cached}
+Lookup Latency:     ${data.latencyMicroseconds} µs (${(data.latencyMicroseconds / 1000).toFixed(4)} ms)
 
 Matched Suggestions:
 ${JSON.stringify(data.suggestions, null, 2)}`;
@@ -1100,17 +1714,17 @@ async function refreshCrawlerStatus() {
         const tbody = document.getElementById('crawler-records-tbody');
         tbody.innerHTML = '';
         if (records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No records extracted yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="autocomplete-state-msg">No records extracted yet. Run crawl first.</td></tr>';
             return;
         }
 
         records.forEach(r => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><code>${r.billerCode}</code></td>
-                <td><strong>${r.name}</strong></td>
-                <td><span class="badge badge-active">${r.category}</span></td>
-                <td><code style="color: #67e8f9;">${r.sourceUrl}</code></td>
+                <td><code class="mono">${escapeHtml(r.billerCode)}</code></td>
+                <td><strong>${escapeHtml(r.name)}</strong></td>
+                <td><span class="badge badge-success">${escapeHtml(r.category)}</span></td>
+                <td><code class="mono" style="color: var(--primary);">${escapeHtml(r.sourceUrl)}</code></td>
             `;
             tbody.appendChild(tr);
         });
@@ -1126,10 +1740,48 @@ async function generateScalingData(customers, txns) {
             method: 'POST'
         });
         const data = await res.json();
-        out.textContent = `=== Dataset Scaling Experiment Results ===
-${JSON.stringify(data, null, 2)}`;
+        out.textContent = `=== Dataset Scaling Experiment Results ===\n${JSON.stringify(data, null, 2)}`;
         showToast('Synthetic dataset generated!', 'success');
     } catch (err) {
         out.textContent = 'Dataset scaling error: ' + err.message;
     }
+}
+
+// ================= UTILITIES & SAFE RENDERING =================
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function highlightTextInElement(parentEl, text, query) {
+    parentEl.innerHTML = '';
+    if (!query) {
+        parentEl.textContent = text;
+        return;
+    }
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const idx = lowerText.indexOf(lowerQuery);
+
+    if (idx === -1) {
+        parentEl.textContent = text;
+        return;
+    }
+
+    const before = text.substring(0, idx);
+    const match = text.substring(idx, idx + query.length);
+    const after = text.substring(idx + query.length);
+
+    if (before) parentEl.appendChild(document.createTextNode(before));
+    const span = document.createElement('span');
+    span.className = 'autocomplete-highlight';
+    span.textContent = match;
+    parentEl.appendChild(span);
+    if (after) parentEl.appendChild(document.createTextNode(after));
 }
